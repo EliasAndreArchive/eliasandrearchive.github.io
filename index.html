@@ -287,11 +287,17 @@ function initLayout() {
     let mediaEl;
     if (item.type === 'video') {
       mediaEl = document.createElement('video');
-      mediaEl.src = MEDIA_PATH + item.src;
-      mediaEl.autoplay = true;
       mediaEl.muted = true;
+      mediaEl.defaultMuted = true;
+      mediaEl.autoplay = true;
       mediaEl.loop = true;
       mediaEl.playsInline = true;
+      mediaEl.setAttribute('muted', '');
+      mediaEl.setAttribute('autoplay', '');
+      mediaEl.setAttribute('loop', '');
+      mediaEl.setAttribute('playsinline', '');
+      mediaEl.setAttribute('webkit-playsinline', '');
+      mediaEl.src = MEDIA_PATH + item.src;
       mediaEl.addEventListener('error', () => mediaEl.classList.add('missing'));
     } else {
       mediaEl = document.createElement('img');
