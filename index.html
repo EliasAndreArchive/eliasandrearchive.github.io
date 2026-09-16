@@ -96,8 +96,23 @@
     background: #fff;
     overflow: visible;
     cursor: pointer;
-    transition: transform .55s cubic-bezier(0.22, 1, 0.36, 1), border-color .15s ease, filter 0.6s ease, opacity 0.6s ease;
+    opacity: 0;
+    scale: 0.02;
+    pointer-events: none;
+    transition:
+      transform .55s cubic-bezier(0.22, 1, 0.36, 1),
+      scale .72s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color .15s ease,
+      filter .6s ease,
+      opacity .42s ease;
+  }
+  .tile.media-ready{
+    opacity: 1;
+    scale: 1;
     pointer-events: auto;
+  }
+  .tile:not(.media-ready){
+    opacity: 0 !important;
   }
   .tile:hover{ border-color: var(--ink-faint); z-index: 5; }
   
@@ -252,6 +267,17 @@ function findSpot(w, h){
   return { x: cx, y: cy };
 }
 
+function revealTile(tile, placeholder, keepPlaceholder = false) {
+  if (tile.classList.contains('media-ready')) return;
+  if (!keepPlaceholder) placeholder.style.display = 'none';
+
+  // Two frames guarantee that the browser paints the tiny initial state
+  // before transitioning the tile to its normal size.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    tile.classList.add('media-ready');
+  }));
+}
+
 function initLayout() {
   const placementOrder = MEDIA
     .map((item, i) => ({ item, i, s: SIZES[item.size] || SIZES.md }))
@@ -292,19 +318,44 @@ function initLayout() {
       mediaEl.autoplay = true;
       mediaEl.loop = true;
       mediaEl.playsInline = true;
+      mediaEl.preload = 'auto';
       mediaEl.setAttribute('muted', '');
       mediaEl.setAttribute('autoplay', '');
       mediaEl.setAttribute('loop', '');
       mediaEl.setAttribute('playsinline', '');
       mediaEl.setAttribute('webkit-playsinline', '');
+
+      const revealWhenPlaying = () => revealTile(tile, placeholder);
+      const tryPlayback = () => {
+        const playAttempt = mediaEl.play();
+        if (playAttempt?.then) {
+          playAttempt
+            .then(() => {
+              if (!mediaEl.paused && mediaEl.readyState >= 2) revealWhenPlaying();
+            })
+            // Low Power Mode or browser policy can still reject autoplay.
+            // Reveal the loaded frame so the tile never remains inaccessible.
+            .catch(() => revealTile(tile, placeholder));
+        }
+      };
+
+      mediaEl.addEventListener('playing', revealWhenPlaying, { once: true });
+      mediaEl.addEventListener('canplay', tryPlayback, { once: true });
+      mediaEl.addEventListener('error', () => {
+        mediaEl.classList.add('missing');
+        revealTile(tile, placeholder, true);
+      }, { once: true });
       mediaEl.src = MEDIA_PATH + item.src;
-      mediaEl.addEventListener('error', () => mediaEl.classList.add('missing'));
     } else {
       mediaEl = document.createElement('img');
-      mediaEl.src = MEDIA_PATH + item.src;
       mediaEl.loading = 'lazy';
       mediaEl.draggable = false;
-      mediaEl.addEventListener('error', () => mediaEl.classList.add('missing'));
+      mediaEl.addEventListener('load', () => revealTile(tile, placeholder), { once: true });
+      mediaEl.addEventListener('error', () => {
+        mediaEl.classList.add('missing');
+        revealTile(tile, placeholder, true);
+      }, { once: true });
+      mediaEl.src = MEDIA_PATH + item.src;
     }
 
     const caption = document.createElement('div');
@@ -323,9 +374,6 @@ function initLayout() {
     tile.appendChild(caption);
     if (info) tile.appendChild(info);
     tile.addEventListener('error', () => {}, true);
-
-    mediaEl.addEventListener('loadeddata', () => placeholder.style.display = 'none');
-    mediaEl.addEventListener('load', () => placeholder.style.display = 'none');
 
     world.appendChild(tile);
   });
