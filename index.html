@@ -96,7 +96,7 @@
     background: #fff;
     overflow: visible;
     cursor: pointer;
-    transition: border-color .15s ease, filter 0.6s ease, opacity 0.6s ease;
+    transition: transform .55s cubic-bezier(0.22, 1, 0.36, 1), border-color .15s ease, filter 0.6s ease, opacity 0.6s ease;
     pointer-events: auto;
   }
   .tile:hover{ border-color: var(--ink-faint); z-index: 5; }
@@ -104,6 +104,7 @@
   .tile.focused {
     z-index: 50;
     border-color: var(--ink-faint);
+    transform: rotate(0deg) !important;
   }
 
   .tile img, .tile video{
@@ -117,16 +118,15 @@
 
   .tile .caption{
     position: absolute; left:0; right:0; bottom:0;
-    padding: 9px 10px 7px;
-    background: rgba(251,250,246,0.36);
-    -webkit-backdrop-filter: blur(9px);
-    backdrop-filter: blur(9px);
+    padding: 18px 10px 7px;
+    background: linear-gradient(to top, rgba(8,8,8,0.82) 0%, rgba(8,8,8,0.42) 58%, rgba(8,8,8,0) 100%);
     border-radius: 0 0 5px 5px;
     font-size: 9.5px;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--ink);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
     opacity: 0;
     transform: translateY(4px);
     transition: opacity .15s ease, transform .15s ease;
@@ -144,9 +144,7 @@
     padding: 8px 10px;
     border: 1px solid rgba(229,226,214,0.8);
     border-radius: 5px;
-    background: rgba(251,250,246,0.72);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    background: rgba(251,250,246,0.94);
     color: var(--ink-dim);
     font-size: 9px;
     line-height: 1.45;
@@ -356,7 +354,10 @@ function getFocusZoom(tile){
 }
 
 function getFocusedBounds(tile){
-  const tileTransform = new DOMMatrix(getComputedStyle(tile).transform);
+  // Focused tiles finish at 0°, even while their CSS rotation is animating.
+  const tileTransform = tile.classList.contains('focused')
+    ? new DOMMatrix()
+    : new DOMMatrix(getComputedStyle(tile).transform);
   const info = tile.querySelector('.info');
   const infoExtension = info ? info.offsetHeight + 9 : 0;
   const totalHeight = tile.offsetHeight + infoExtension;
