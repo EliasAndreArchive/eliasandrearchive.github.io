@@ -62,6 +62,8 @@
     position: fixed; inset: 0;
     cursor: grab;
     overflow: hidden;
+    touch-action: none;
+    overscroll-behavior: none;
   }
   #stage.grabbing{ cursor: grabbing; }
   #world{
@@ -304,13 +306,60 @@ async function initLayout() {
 initLayout();
 
 const stage = document.getElementById('stage');
-let zoom = 1, pan = { x: 0, y: 0 };
+const DESKTOP_FOCUS_ZOOM = 2.4;
+const FOCUS_GUTTER = 24;
+
+function getOverviewZoom(){
+  // Keep the original desktop composition, but give the world some breathing
+  // room on narrow screens instead of rendering it at a desktop-sized scale.
+  return Math.min(1, Math.max(0.68, window.innerWidth / 520));
+}
+
+function getFocusZoom(tile){
+  const tileTransform = new DOMMatrix(getComputedStyle(tile).transform);
+  const tileWidth = Math.abs(tileTransform.a) * tile.offsetWidth +
+    Math.abs(tileTransform.c) * tile.offsetHeight;
+  const tileHeight = Math.abs(tileTransform.b) * tile.offsetWidth +
+    Math.abs(tileTransform.d) * tile.offsetHeight;
+  const horizontalGutter = window.innerWidth < 600 ? FOCUS_GUTTER : 56;
+  const verticalGutter = window.innerWidth < 600 ? 96 : 72;
+  const availableWidth = Math.max(1, window.innerWidth - horizontalGutter * 2);
+  const availableHeight = Math.max(1, window.innerHeight - verticalGutter * 2);
+
+  return Math.min(
+    DESKTOP_FOCUS_ZOOM,
+    availableWidth / tileWidth,
+    availableHeight / tileHeight
+  );
+}
+
+let zoom = getOverviewZoom(), pan = { x: 0, y: 0 };
 let focusedTile = null;
 
 function updateTransform(){
   world.style.transform = `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
 }
 updateTransform();
+
+function focusTile(tile){
+  focusedTile = tile;
+  focusedTile.classList.add('focused');
+  world.classList.add('has-focus');
+
+  zoom = getFocusZoom(tile);
+  const cx = parseFloat(tile.dataset.cx);
+  const cy = parseFloat(tile.dataset.cy);
+  pan.x = CENTER - cx * zoom;
+  pan.y = CENTER - cy * zoom;
+}
+
+function clearFocus(){
+  focusedTile?.classList.remove('focused');
+  world.classList.remove('has-focus');
+  focusedTile = null;
+  zoom = getOverviewZoom();
+  pan = { x: 0, y: 0 };
+}
 
 let dragging = false, dragStart = null, panStart = null, moved = false, dragStartTarget = null;
 
@@ -344,22 +393,10 @@ stage.addEventListener('pointerup', (e) => {
     world.classList.add('transitioning');
 
     if (focusedTile) {
-      focusedTile.classList.remove('focused');
-      world.classList.remove('has-focus');
-      focusedTile = null;
-      zoom = 1;
-      pan = { x: 0, y: 0 };
+      clearFocus();
     } 
     else if (tile) {
-      focusedTile = tile;
-      focusedTile.classList.add('focused');
-      world.classList.add('has-focus');
-
-      zoom = 2.4; 
-      const cx = parseFloat(tile.dataset.cx);
-      const cy = parseFloat(tile.dataset.cy);
-      pan.x = CENTER - cx * zoom;
-      pan.y = CENTER - cy * zoom;
+      focusTile(tile);
     }
 
     updateTransform();
@@ -376,6 +413,16 @@ stage.addEventListener('pointercancel', () => {
   dragging = false; 
   stage.classList.remove('grabbing'); 
   dragStartTarget = null;
+});
+
+window.addEventListener('resize', () => {
+  if (focusedTile) {
+    focusTile(focusedTile);
+  } else {
+    zoom = getOverviewZoom();
+    pan = { x: 0, y: 0 };
+  }
+  updateTransform();
 });
 </script>
 </body>
