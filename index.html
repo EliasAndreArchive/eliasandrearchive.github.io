@@ -238,6 +238,7 @@ const world = document.getElementById('world');
 const CENTER = 700; 
 const GAP = 12; 
 const placedRects = [];
+let overviewCenter = { x: CENTER, y: CENTER };
 
 function overlaps(a, b, pad){
   return a.left - pad < b.right && a.right + pad > b.left &&
@@ -377,6 +378,17 @@ function initLayout() {
 
     world.appendChild(tile);
   });
+
+  if (placedRects.length) {
+    const left = Math.min(...placedRects.map(rect => rect.left));
+    const right = Math.max(...placedRects.map(rect => rect.right));
+    const top = Math.min(...placedRects.map(rect => rect.top));
+    const bottom = Math.max(...placedRects.map(rect => rect.bottom));
+    overviewCenter = {
+      x: (left + right) / 2,
+      y: (top + bottom) / 2,
+    };
+  }
   
   world.classList.add('ready');
 }
@@ -391,6 +403,14 @@ function getOverviewZoom(){
   // Keep the original desktop composition, but give the world some breathing
   // room on narrow screens instead of rendering it at a desktop-sized scale.
   return Math.min(1, Math.max(0.62, window.innerWidth / 580));
+}
+
+function getOverviewPan(overviewZoom){
+  if (window.innerWidth >= 600) return { x: 0, y: 0 };
+  return {
+    x: CENTER - overviewCenter.x * overviewZoom,
+    y: CENTER - overviewCenter.y * overviewZoom,
+  };
 }
 
 function getFocusZoom(tile){
@@ -426,7 +446,7 @@ function getFocusedBounds(tile){
   };
 }
 
-let zoom = getOverviewZoom(), pan = { x: 0, y: 0 };
+let zoom = getOverviewZoom(), pan = getOverviewPan(zoom);
 let focusedTile = null;
 
 function updateTransform(){
@@ -579,7 +599,7 @@ window.addEventListener('resize', () => {
     focusTile(focusedTile);
   } else {
     zoom = getOverviewZoom();
-    pan = { x: 0, y: 0 };
+    pan = getOverviewPan(zoom);
   }
   updateTransform();
 });
