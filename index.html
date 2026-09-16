@@ -312,7 +312,7 @@ const FOCUS_GUTTER = 24;
 function getOverviewZoom(){
   // Keep the original desktop composition, but give the world some breathing
   // room on narrow screens instead of rendering it at a desktop-sized scale.
-  return Math.min(1, Math.max(0.68, window.innerWidth / 520));
+  return Math.min(1, Math.max(0.62, window.innerWidth / 580));
 }
 
 function getFocusZoom(tile){
@@ -354,22 +354,78 @@ function focusTile(tile){
 }
 
 function clearFocus(){
+  const previousTile = focusedTile;
   focusedTile?.classList.remove('focused');
   world.classList.remove('has-focus');
   focusedTile = null;
   zoom = getOverviewZoom();
-  pan = { x: 0, y: 0 };
+
+  if (window.innerWidth < 600 && previousTile) {
+    const cx = parseFloat(previousTile.dataset.cx);
+    const cy = parseFloat(previousTile.dataset.cy);
+    pan = { x: CENTER - cx * zoom, y: CENTER - cy * zoom };
+  } else {
+    pan = { x: 0, y: 0 };
+  }
 }
 
 let dragging = false, dragStart = null, panStart = null, moved = false, dragStartTarget = null;
+let lastPointer = null, velocity = { x: 0, y: 0 };
+let inertiaFrame = null, transitionLocked = false, transitionTimer = null;
+
+function stopInertia(){
+  if (inertiaFrame) cancelAnimationFrame(inertiaFrame);
+  inertiaFrame = null;
+  velocity = { x: 0, y: 0 };
+}
+
+function startInertia(){
+  if (Math.hypot(velocity.x, velocity.y) < 0.04) return;
+  let previousTime = performance.now();
+
+  function glide(now){
+    const elapsed = Math.min(32, now - previousTime);
+    previousTime = now;
+    const decay = Math.pow(0.91, elapsed / 16.67);
+    velocity.x *= decay;
+    velocity.y *= decay;
+    pan.x += velocity.x * elapsed;
+    pan.y += velocity.y * elapsed;
+    updateTransform();
+
+    if (Math.hypot(velocity.x, velocity.y) > 0.015) {
+      inertiaFrame = requestAnimationFrame(glide);
+    } else {
+      stopInertia();
+    }
+  }
+
+  inertiaFrame = requestAnimationFrame(glide);
+}
+
+function animateCamera(change){
+  transitionLocked = true;
+  world.classList.add('transitioning');
+  change();
+  updateTransform();
+
+  clearTimeout(transitionTimer);
+  transitionTimer = setTimeout(() => {
+    world.classList.remove('transitioning');
+    transitionLocked = false;
+  }, 600);
+}
 
 stage.addEventListener('pointerdown', (e) => {
+  if (transitionLocked) return;
+  stopInertia();
   world.classList.remove('transitioning');
   dragging = true; 
   moved = false;
   dragStartTarget = e.target; 
   dragStart = { x: e.clientX, y: e.clientY };
   panStart = { x: pan.x, y: pan.y };
+  lastPointer = { x: e.clientX, y: e.clientY, time: performance.now() };
   stage.classList.add('grabbing');
   stage.setPointerCapture(e.pointerId);
 });
@@ -378,6 +434,13 @@ stage.addEventListener('pointermove', (e) => {
   if (!dragging) return;
   const dx = e.clientX - dragStart.x;
   const dy = e.clientY - dragStart.y;
+  const now = performance.now();
+  const elapsed = Math.max(1, now - lastPointer.time);
+  const nextVelocityX = (e.clientX - lastPointer.x) / elapsed;
+  const nextVelocityY = (e.clientY - lastPointer.y) / elapsed;
+  velocity.x = velocity.x * 0.65 + nextVelocityX * 0.35;
+  velocity.y = velocity.y * 0.65 + nextVelocityY * 0.35;
+  lastPointer = { x: e.clientX, y: e.clientY, time: now };
   if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
   pan.x = panStart.x + dx;
   pan.y = panStart.y + dy;
@@ -385,25 +448,26 @@ stage.addEventListener('pointermove', (e) => {
 });
 
 stage.addEventListener('pointerup', (e) => {
+  if (!dragging) return;
   dragging = false; 
   stage.classList.remove('grabbing');
   
   if (!moved) {
     const tile = dragStartTarget ? dragStartTarget.closest('.tile') : null;
-    world.classList.add('transitioning');
-
-    if (focusedTile) {
-      clearFocus();
-    } 
-    else if (tile) {
-      focusTile(tile);
+    if (focusedTile || tile) {
+      animateCamera(() => focusedTile ? clearFocus() : focusTile(tile));
     }
-
-    updateTransform();
-    
-    setTimeout(() => {
-      world.classList.remove('transitioning');
-    }, 600);
+  } else {
+    if (performance.now() - lastPointer.time > 80) {
+      velocity = { x: 0, y: 0 };
+    } else {
+      const speed = Math.hypot(velocity.x, velocity.y);
+      if (speed > 1.2) {
+        velocity.x *= 1.2 / speed;
+        velocity.y *= 1.2 / speed;
+      }
+    }
+    startInertia();
   }
   
   dragStartTarget = null;
@@ -413,6 +477,7 @@ stage.addEventListener('pointercancel', () => {
   dragging = false; 
   stage.classList.remove('grabbing'); 
   dragStartTarget = null;
+  stopInertia();
 });
 
 window.addEventListener('resize', () => {
