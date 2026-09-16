@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #fbfaf6;
+    --ink: #1c1b17;
+    --ink-dim: #9a9686;
+    --ink-faint: #c7c3b6;
+    --line: #e5e2d6;
+    --red: #b84a2a;
+    --yellow: #e6b13c;
+    --blue: #4c74a8;
+    --font: 'Inter', system-ui, sans-serif;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    height:100%;
+    overflow:hidden;
+    -webkit-font-smoothing: antialiased;
+    -webkit-user-select: none; 
+    user-select: none; 
+  }
+
+  /* ---------- chrome ---------- */
+  .wordmark{
+    position: fixed; top: 26px; left: 28px;
+    display:flex; align-items:center; gap: 9px;
+    z-index: 20;
+    pointer-events: none;
+  }
+  .dots{ display:flex; }
+  .dots span{ width:8px; height:8px; border-radius:50%; display:block; margin-left:-3px; }
+  .dots span:first-child{ margin-left:0; background: var(--red); }
+  .dots span:nth-child(2){ background: var(--yellow); }
+  .dots span:nth-child(3){ background: var(--blue); }
+  .wordmark .name{ font-size:15px; font-weight:600; letter-spacing:-0.01em; }
+
+  .hint{
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    z-index: 20;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  /* ---------- stage / world ---------- */
+  #stage{
+    position: fixed; inset: 0;
+    cursor: grab;
+    overflow: hidden;
+  }
+  #stage.grabbing{ cursor: grabbing; }
+  #world{
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 1400px; height: 1400px;
+    transform-origin: 0 0;
+    will-change: transform;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  #world.ready {
+    opacity: 1;
+  }
+  
+  #world.transitioning {
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+  }
+
+  #world.has-focus .tile:not(.focused) {
+    filter: blur(8px) grayscale(30%);
+    opacity: 0.4;
+  }
+
+  /* ---------- tiles ---------- */
+  .tile{
+    position: absolute;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: #fff;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color .15s ease, filter 0.6s ease, opacity 0.6s ease;
+    pointer-events: auto;
+  }
+  .tile:hover{ border-color: var(--ink-faint); z-index: 5; }
+  
+  .tile.focused {
+    z-index: 50;
+    border-color: var(--ink-faint);
+  }
+
+  .tile img, .tile video{
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none; 
+  }
+
+  .tile .caption{
+    position: absolute; left:0; right:0; bottom:0;
+    padding: 16px 10px 8px;
+    background: linear-gradient(to top, rgba(255,255,255,0.92), rgba(255,255,255,0));
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .15s ease, transform .15s ease;
+    pointer-events: none;
+  }
+  .tile:hover .caption, .tile.focused .caption { 
+    opacity: 1; transform: none; 
+  }
+
+  .tile .placeholder{
+    width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap: 8px;
+    background:
+      repeating-linear-gradient(135deg, #f1efe8 0px, #f1efe8 10px, #ece9df 10px, #ece9df 20px);
+  }
+  .tile .placeholder svg{ width:18px; height:18px; stroke: var(--ink-faint); }
+  .tile .placeholder span{
+    font-size: 9px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color: var(--ink-dim);
+  }
+  .tile img.missing, .tile video.missing{ display:none; }
+</style>
+</head>
+<body>
+
+  <div class="wordmark">
+    <div class="dots"><span></span><span></span><span></span></div>
+    <div class="name">Your Name</div>
+  </div>
+  <div class="hint">Drag to pan · click a piece to focus</div>
+
+  <div id="stage">
+    <div id="world"></div>
+  </div>
+
+<script>
+const MEDIA = [
+  { src:'compressed_video-01.mp4', caption:'Motion — 01', size:'lg' },
+  { src:'compressed_video-02.mp4', caption:'Motion — 02', size:'md' },
+  { src:'compressed_video-03.mp4', caption:'Motion — 03', size:'sm' },
+  { src:'compressed_video-04.mp4', caption:'Motion — 04', size:'lg' },
+  { src:'compressed_video-05.mp4', caption:'Motion — 05', size:'md' },
+  { src:'compressed_video-06.mp4', caption:'Motion — 06', size:'sm' },
+  { src:'compressed_video-07.mp4', caption:'Motion — 07', size:'md' },
+  { src:'compressed_video-08.mp4', caption:'Motion — 08', size:'lg' },
+  { src:'compressed_video-09.mp4', caption:'Motion — 09', size:'sm' },
+  { src:'compressed_video-10.mp4', caption:'Motion — 10', size:'md' },
+  { src:'compressed_video-11.mp4', caption:'Motion — 11', size:'lg' },
+  { src:'compressed_video-12.mp4', caption:'Motion — 12', size:'lg' },
+  { src:'compressed_video-13.mp4', caption:'Motion — 13', size:'md' },
+  { src:'compressed_video-14.mp4', caption:'Motion — 14', size:'sm' },
+  { src:'compressed_video-15.mp4', caption:'Motion — 15', size:'sm' },
+  { src:'compressed_video-16.mp4', caption:'Motion — 16', size:'md' },
+  { src:'compressed_video-17.mp4', caption:'Motion — 17', size:'lg' },
+];
+
+// Auto-detect type based on extension
+MEDIA.forEach(item => {
+  const ext = item.src.split('.').pop().toLowerCase();
+  item.type = ['mp4', 'mov', 'webm'].includes(ext) ? 'video' : 'photo';
+});
+
+const SIZES = { sm: 130, md: 190, lg: 250 };
+const world = document.getElementById('world');
+const CENTER = 700; 
+const GAP = 12; 
+const placedRects = [];
+
+function overlaps(a, b, pad){
+  return a.left - pad < b.right && a.right + pad > b.left &&
+         a.top - pad < b.bottom && a.bottom + pad > b.top;
+}
+
+function findSpot(w, h){
+  const dTheta = 0.11;
+  const growth = 5.5;
+  let theta = Math.random() * Math.PI * 2; 
+  let iterations = 0;
+  while (iterations < 4000) {
+    const r = growth * theta;
+    const cx = CENTER + r * Math.cos(theta);
+    const cy = CENTER + r * Math.sin(theta);
+    const rect = { left: cx - w/2, top: cy - h/2, right: cx + w/2, bottom: cy + h/2 };
+    const collides = placedRects.some(p => overlaps(rect, p, GAP));
+    if (!collides) {
+      placedRects.push(rect);
+      return { x: cx, y: cy };
+    }
+    theta += dTheta;
+    iterations++;
+  }
+  const cx = CENTER, cy = CENTER;
+  placedRects.push({ left: cx - w/2, top: cy - h/2, right: cx + w/2, bottom: cy + h/2 });
+  return { x: cx, y: cy };
+}
+
+async function initLayout() {
+  await Promise.all(MEDIA.map(item => {
+    return new Promise(resolve => {
+      if (item.w && item.h) return resolve(); 
+      
+      if (item.type === 'video') {
+        const v = document.createElement('video');
+        v.onloadedmetadata = () => { item.w = v.videoWidth; item.h = v.videoHeight; resolve(); };
+        v.onerror = resolve; 
+        v.src = 'media/' + item.src;
+      } else {
+        const img = new Image();
+        img.onload = () => { item.w = img.naturalWidth; item.h = img.naturalHeight; resolve(); };
+        img.onerror = resolve; 
+        img.src = 'media/' + item.src;
+      }
+    });
+  }));
+
+  const placementOrder = MEDIA
+    .map((item, i) => ({ item, i, s: SIZES[item.size] || SIZES.md }))
+    .sort((a, b) => b.s - a.s);
+
+  placementOrder.forEach(({ item, i, s }) => {
+    const ratio = (item.w && item.h) ? (item.w / item.h) : (4/3);
+    
+    const baseArea = s * s * 1.15; 
+    const w = Math.round(Math.sqrt(baseArea * ratio));
+    const h = Math.round(Math.sqrt(baseArea / ratio));
+    
+    const { x, y } = findSpot(w, h);
+    const rot = (Math.sin(i * 4.71) * 4).toFixed(1);
+
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.style.width = w + 'px';
+    tile.style.height = h + 'px';
+    tile.style.left = (x - w/2) + 'px';
+    tile.style.top = (y - h/2) + 'px';
+    tile.style.transform = `rotate(${rot}deg)`;
+    
+    tile.dataset.cx = x;
+    tile.dataset.cy = y;
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'placeholder';
+    placeholder.innerHTML = item.type === 'video'
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.4"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="M17 9l4-2v10l-4-2"/></svg><span>Add ' + item.src + '</span>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.4"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 15l-5-5L5 20"/></svg><span>Add ' + item.src + '</span>';
+
+    let mediaEl;
+    if (item.type === 'video') {
+      mediaEl = document.createElement('video');
+      mediaEl.src = 'media/' + item.src;
+      mediaEl.autoplay = true;
+      mediaEl.muted = true;
+      mediaEl.loop = true;
+      mediaEl.playsInline = true;
+      mediaEl.addEventListener('error', () => mediaEl.classList.add('missing'));
+    } else {
+      mediaEl = document.createElement('img');
+      mediaEl.src = 'media/' + item.src;
+      mediaEl.loading = 'lazy';
+      mediaEl.draggable = false;
+      mediaEl.addEventListener('error', () => mediaEl.classList.add('missing'));
+    }
+
+    const caption = document.createElement('div');
+    caption.className = 'caption';
+    caption.textContent = item.caption;
+
+    tile.appendChild(placeholder);
+    tile.appendChild(mediaEl);
+    tile.appendChild(caption);
+    tile.addEventListener('error', () => {}, true);
+
+    mediaEl.addEventListener('loadeddata', () => placeholder.style.display = 'none');
+    mediaEl.addEventListener('load', () => placeholder.style.display = 'none');
+
+    world.appendChild(tile);
+  });
+  
+  world.classList.add('ready');
+}
+
+initLayout();
+
+const stage = document.getElementById('stage');
+let zoom = 1, pan = { x: 0, y: 0 };
+let focusedTile = null;
+
+function updateTransform(){
+  world.style.transform = `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
+}
+updateTransform();
+
+let dragging = false, dragStart = null, panStart = null, moved = false, dragStartTarget = null;
+
+stage.addEventListener('pointerdown', (e) => {
+  world.classList.remove('transitioning');
+  dragging = true; 
+  moved = false;
+  dragStartTarget = e.target; 
+  dragStart = { x: e.clientX, y: e.clientY };
+  panStart = { x: pan.x, y: pan.y };
+  stage.classList.add('grabbing');
+  stage.setPointerCapture(e.pointerId);
+});
+
+stage.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  const dx = e.clientX - dragStart.x;
+  const dy = e.clientY - dragStart.y;
+  if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+  pan.x = panStart.x + dx;
+  pan.y = panStart.y + dy;
+  updateTransform();
+});
+
+stage.addEventListener('pointerup', (e) => {
+  dragging = false; 
+  stage.classList.remove('grabbing');
+  
+  if (!moved) {
+    const tile = dragStartTarget ? dragStartTarget.closest('.tile') : null;
+    world.classList.add('transitioning');
+
+    if (focusedTile) {
+      focusedTile.classList.remove('focused');
+      world.classList.remove('has-focus');
+      focusedTile = null;
+      zoom = 1;
+      pan = { x: 0, y: 0 };
+    } 
+    else if (tile) {
+      focusedTile = tile;
+      focusedTile.classList.add('focused');
+      world.classList.add('has-focus');
+
+      zoom = 2.4; 
+      const cx = parseFloat(tile.dataset.cx);
+      const cy = parseFloat(tile.dataset.cy);
+      pan.x = CENTER - cx * zoom;
+      pan.y = CENTER - cy * zoom;
+    }
+
+    updateTransform();
+    
+    setTimeout(() => {
+      world.classList.remove('transitioning');
+    }, 600);
+  }
+  
+  dragStartTarget = null;
+});
+
+stage.addEventListener('pointercancel', () => { 
+  dragging = false; 
+  stage.classList.remove('grabbing'); 
+  dragStartTarget = null;
+});
+</script>
+</body>
+</html>
