@@ -254,25 +254,7 @@ function findSpot(w, h){
   return { x: cx, y: cy };
 }
 
-async function initLayout() {
-  await Promise.all(MEDIA.map(item => {
-    return new Promise(resolve => {
-      if (item.w && item.h) return resolve(); 
-      
-      if (item.type === 'video') {
-        const v = document.createElement('video');
-        v.onloadedmetadata = () => { item.w = v.videoWidth; item.h = v.videoHeight; resolve(); };
-        v.onerror = resolve; 
-        v.src = MEDIA_PATH + item.src;
-      } else {
-        const img = new Image();
-        img.onload = () => { item.w = img.naturalWidth; item.h = img.naturalHeight; resolve(); };
-        img.onerror = resolve; 
-        img.src = MEDIA_PATH + item.src;
-      }
-    });
-  }));
-
+function initLayout() {
   const placementOrder = MEDIA
     .map((item, i) => ({ item, i, s: SIZES[item.size] || SIZES.md }))
     .sort((a, b) => b.s - a.s);
