@@ -1,0 +1,22 @@
+{
+  "mediaBaseUrl": "https://pub-26ba9fbb06f4490c97b63ffea3c40c67.r2.dev/",
+  "items": [
+    { "file": "cinematic/compressed_video-01.mp4", "category": "home", "label": "weird fishes", "text": "Filmed in an aquarium in January of 2026", "size": "md" },
+    { "file": "cinematic/compressed_video-02.mp4", "category": "home", "label": "big seaturtle", "text": "There are seven species of sea turtles that have roamed the Earth's oceans for more than 110 million years.", "size": "md" },
+    { "file": "cinematic/compressed_video-03.mp4", "category": "home", "label": "weird fishes 2", "text": "Mediterranean anthias to be exact", "size": "md" },
+    { "file": "cinematic/compressed_video-04.mp4", "category": "home", "label": "moon", "text": "Every human who ever lived looked up and saw the same moon you see", "size": "sm" },
+    { "file": "cinematic/compressed_video-05.mp4", "category": "home", "label": "shiny ducks", "text": "It was freezing cold that day, how can they even survive in such cold weather?", "size": "md" },
+    { "file": "cinematic/compressed_video-06.mp4", "category": "home", "label": "thats me", "text": "My name is Elias Andre. I use my modified Canon 70D, as well as a variety of other gear to create art", "size": "md" },
+    { "file": "cinematic/compressed_video-07.mp4", "category": "home", "label": "sunrise", "text": "This was filmed on the coast of Croatia in summer 2025", "size": "lg" },
+    { "file": "cinematic/compressed_video-08.mp4", "category": "home", "label": "static trees", "text": "Sometimes video does not need movement to look beautiful", "size": "md" },
+    { "file": "cinematic/compressed_video-09.mp4", "category": "home", "label": "forest", "text": "Would you believe me if I told you that was filmed in Germany?", "size": "md" },
+    { "file": "cinematic/compressed_video-10.mp4", "category": "home", "label": "fields", "text": "Always on the hunt for that golden hour", "size": "lg" },
+    { "file": "cinematic/compressed_video-11.mp4", "category": "home", "label": "nature", "text": "Fun fact: all of my photos on that day were shot in lowest quality JPEG by accident", "size": "md" },
+    { "file": "cinematic/compressed_video-12.mp4", "category": "home", "label": "the odyssey", "text": "Filmed in France during the peak of summer 2026", "size": "lg" },
+    { "file": "cinematic/compressed_video-13.mp4", "category": "home", "label": "my gf", "text": "Our first time travelling together, filmed in Ireland during fall 2025", "size": "md" },
+    { "file": "cinematic/compressed_video-14.mp4", "category": "home", "label": "sunset", "text": "Almost looks like an eclipse, does it not?", "size": "sm" },
+    { "file": "cinematic/compressed_video-15.mp4", "category": "home", "label": "mountains", "text": "Fun fact: I forgot to charge all of my batteries that morning", "size": "sm" },
+    { "file": "cinematic/compressed_video-16.mp4", "category": "home", "label": "basketball", "text": "I do not actually play basketball", "size": "md" },
+    { "file": "cinematic/compressed_video-17.mp4", "category": "home", "label": "concert", "text": "Most chaotic event I had to film so far", "size": "lg" }
+  ]
+}
