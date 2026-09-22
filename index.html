@@ -333,12 +333,29 @@
     pointer-events: none;
   }
   .tile.focused .info{
-    opacity: 1;
+    opacity: 0;
     transform: none;
     top: calc(100% + 9px * var(--focus-ui-scale, 1));
-    padding: calc(9px * var(--focus-ui-scale, 1)) calc(11px * var(--focus-ui-scale, 1));
-    border-radius: calc(5px * var(--focus-ui-scale, 1));
-    font-size: calc(9.5px * var(--focus-ui-scale, 1));
+    left: 0;
+    right: 0;
+    padding: calc(8px * var(--focus-ui-scale, 1)) 0 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: calc(12.5px * var(--focus-ui-scale, 1));
+    font-weight: 600;
+    line-height: 1.45;
+    transition: opacity .2s ease;
+  }
+
+  .tile.focused .caption{
+    opacity: 0;
+    transition: opacity .2s ease;
+  }
+  .tile.focused.focus-settled .caption,
+  .tile.focused.focus-settled .info{
+    opacity: 1;
   }
 
   @media (max-width: 640px){
@@ -346,27 +363,6 @@
     .tile:hover:not(.focused) .caption{
       opacity: 0;
       transform: translateY(4px);
-    }
-    .tile.focused .caption,
-    .tile.focused .info{
-      opacity: 0;
-      transition: opacity .2s ease;
-    }
-    .tile.focused.focus-settled .caption,
-    .tile.focused.focus-settled .info{
-      opacity: 1;
-    }
-    .tile.focused .info{
-      left: 0;
-      right: 0;
-      padding: calc(8px * var(--focus-ui-scale, 1)) 0 0;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      color: var(--ink);
-      font-size: calc(12.5px * var(--focus-ui-scale, 1));
-      font-weight: 600;
-      line-height: 1.45;
     }
   }
 
@@ -710,7 +706,7 @@ function clampPortraitPanY(value){
 function getFocusZoom(tile){
   const tileWidth = tile.offsetWidth;
   const tileHeight = tile.offsetHeight;
-  const horizontalGutter = window.innerWidth < 600 ? 8 : 56;
+  const horizontalGutter = window.innerWidth < 600 ? 24 : 56;
   const verticalGutter = window.innerWidth < 600 ? 96 : 72;
   const availableWidth = Math.max(1, window.innerWidth - horizontalGutter * 2);
   const availableHeight = Math.max(1, window.innerHeight - verticalGutter * 2);
