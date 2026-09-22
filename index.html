@@ -213,7 +213,7 @@
   }
   
   #world.transitioning {
-    transition: transform 0.95s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.42s ease;
+    transition: transform 0.78s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.36s ease;
   }
 
   #world.has-focus .tile:not(.focused) {
@@ -240,9 +240,8 @@
     pointer-events: none;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
-    backface-visibility: hidden;
     transition:
-      transform .95s cubic-bezier(0.65, 0, 0.35, 1),
+      transform .78s cubic-bezier(0.65, 0, 0.35, 1),
       scale .72s cubic-bezier(0.16, 1, 0.3, 1),
       border-color .15s ease,
       border-width .3s ease,
@@ -279,17 +278,12 @@
     pointer-events: none; 
     border-radius: inherit;
     transition: border-radius .45s cubic-bezier(0.22, 1, 0.36, 1);
-    backface-visibility: hidden;
-    transform: translateZ(0);
   }
 
   @media (max-width: 640px){
     #world.has-focus .tile:not(.focused){
-      filter: none;
-      opacity: .22;
-    }
-    .tile{
-      box-shadow: 0 7px 18px -11px rgba(28,27,23,.26);
+      filter: blur(8px) grayscale(30%);
+      opacity: .4;
     }
   }
   .tile video{ background: #111; }
@@ -351,6 +345,27 @@
       opacity: 0;
       transform: translateY(4px);
     }
+    .tile.focused .caption,
+    .tile.focused .info{
+      opacity: 0;
+      transition: none;
+    }
+    .tile.focused.focus-settled .caption,
+    .tile.focused.focus-settled .info{
+      opacity: 1;
+    }
+    .tile.focused .info{
+      left: 0;
+      right: 0;
+      padding: calc(8px * var(--focus-ui-scale, 1)) 0 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--ink);
+      font-size: calc(12.5px * var(--focus-ui-scale, 1));
+      font-weight: 600;
+      line-height: 1.45;
+    }
   }
 
   .tile .placeholder{
@@ -393,7 +408,6 @@
 let MEDIA = [];
 let mediaBaseUrl = '';
 let mobileViewMode = 'stream';
-let streamMediaObserver = null;
 
 const SIZES = { sm: 130, md: 190, lg: 250 };
 const ROTATIONS = [-3.4, 1.8, -2.2, 3.7, -1.3, 2.8, -3.9, 1.1, 3.1, -2.7, 1.6, -3.2, 2.4, -1.8, 3.9, -2.5, 1.4];
@@ -504,25 +518,11 @@ function buildPortraitPlan(entries){
 }
 
 function initLayout(items = MEDIA) {
-  streamMediaObserver?.disconnect();
-  streamMediaObserver = null;
   world.replaceChildren();
   placedRects = [];
   overviewCenter = { x: CENTER, y: CENTER };
   world.classList.remove('ready');
   const portraitLayout = isPortraitMobile();
-  if (portraitLayout) {
-    streamMediaObserver = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        const video = entry.target;
-        if (entry.isIntersecting) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      });
-    }, { root: stage, rootMargin: '180px 0px', threshold: 0 });
-  }
 
   const sourceOrder = items.map((item, i) => {
     const s = SIZES[item.size] || SIZES.md;
@@ -636,7 +636,6 @@ function initLayout(items = MEDIA) {
     tile.addEventListener('error', () => {}, true);
 
     world.appendChild(tile);
-    if (streamMediaObserver && item.type === 'video') streamMediaObserver.observe(mediaEl);
   });
 
   if (placedRects.length) {
@@ -760,6 +759,7 @@ function focusTile(tile){
     preFocusView = { zoom, pan: { x: pan.x, y: pan.y } };
   }
   focusedTile = tile;
+  focusedTile.classList.remove('focus-settled');
   focusedTile.classList.add('focused');
   world.classList.add('has-focus');
 
@@ -774,8 +774,7 @@ function focusTile(tile){
 
 function clearFocus(){
   const previousTile = focusedTile;
-  focusedTile?.classList.remove('focused');
-  focusedTile?.style.removeProperty('--focus-ui-scale');
+  previousTile?.classList.remove('focus-settled');
   world.classList.remove('has-focus');
   focusedTile = null;
   zoom = preFocusView?.zoom ?? getOverviewZoom();
@@ -796,11 +795,18 @@ function clearFocus(){
     pan = { x: 0, y: 0 };
   }
   preFocusView = null;
+
+  clearTimeout(focusRestoreTimer);
+  focusRestoreTimer = setTimeout(() => {
+    previousTile?.classList.remove('focused');
+    previousTile?.style.removeProperty('--focus-ui-scale');
+  }, 780);
 }
 
 let dragging = false, dragStart = null, panStart = null, moved = false, dragStartTarget = null;
 let lastPointer = null, velocity = { x: 0, y: 0 };
 let inertiaFrame = null, transitionLocked = false, transitionTimer = null;
+let focusRestoreTimer = null;
 let categorySwitching = false;
 let categories = [];
 let activeCategoryIndex = 0;
@@ -854,7 +860,8 @@ function animateCamera(change){
   transitionTimer = setTimeout(() => {
     world.classList.remove('transitioning');
     transitionLocked = false;
-  }, 980);
+    focusedTile?.classList.add('focus-settled');
+  }, 810);
 }
 
 stage.addEventListener('pointerdown', (e) => {
