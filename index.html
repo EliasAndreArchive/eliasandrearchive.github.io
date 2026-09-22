@@ -66,29 +66,41 @@
     align-items: center;
     gap: 9px;
   }
-  .category-picker label{
+  .category-picker .collection-label{
     font-size: 10px;
     font-weight: 600;
     letter-spacing: .1em;
     text-transform: uppercase;
     color: var(--ink-dim);
   }
-  .category-picker select{
-    appearance: none;
+  .category-nav{
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px;
     border: 1px solid var(--line);
     border-radius: 999px;
-    background: var(--bg);
+    background: rgba(251,250,246,.92);
+    box-shadow: 0 8px 24px -18px rgba(28,27,23,.55);
+  }
+  .category-nav button{
+    appearance: none;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
     color: var(--ink);
     font: 600 11px/1 var(--font);
     letter-spacing: .02em;
-    padding: 9px 30px 9px 13px;
+    padding: 8px 12px;
     cursor: pointer;
-    background-image: linear-gradient(45deg, transparent 50%, var(--ink-dim) 50%), linear-gradient(135deg, var(--ink-dim) 50%, transparent 50%);
-    background-position: calc(100% - 14px) 13px, calc(100% - 10px) 13px;
-    background-size: 4px 4px, 4px 4px;
-    background-repeat: no-repeat;
+    transition: color .2s ease, background-color .25s ease, opacity .2s ease;
   }
-  .category-picker select:focus-visible{
+  .category-nav button[aria-current="page"]{
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .category-nav button:disabled{ cursor: default; }
+  .category-nav button:focus-visible{
     outline: 2px solid var(--blue);
     outline-offset: 2px;
   }
@@ -103,12 +115,28 @@
     }
     .wordmark .name{ max-width: none; font-size: 12px; white-space: nowrap; }
     .category-picker{
-      top: 52px;
+      top: auto;
+      bottom: 18px;
       left: 50%;
       right: auto;
       transform: translateX(-50%);
     }
-    .category-picker label{ display:none; }
+    .category-picker .collection-label{ display:none; }
+    .category-nav{
+      gap: 4px;
+      padding: 4px;
+      max-width: calc(100vw - 24px);
+      overflow-x: auto;
+      scrollbar-width: none;
+      box-shadow: 0 10px 30px -16px rgba(28,27,23,.5);
+    }
+    .category-nav::-webkit-scrollbar{ display:none; }
+    .category-nav button{
+      min-height: 40px;
+      padding: 0 17px;
+      font-size: 12px;
+    }
+    .hint{ bottom: 76px; }
   }
 
   /* ---------- stage / world ---------- */
@@ -132,6 +160,19 @@
   #world.ready {
     opacity: 1;
   }
+
+  #world.collection-exiting{
+    pointer-events: none;
+  }
+  #world.collection-exiting .tile{
+    opacity: 0 !important;
+    scale: .08;
+    transition-delay: calc(var(--switch-order, 0) * 12ms);
+    transition-duration: .32s, .42s, .15s, .3s, .45s, .45s, .6s, .32s;
+  }
+  #world.collection-entering .tile{
+    transition-delay: calc(var(--switch-order, 0) * 12ms);
+  }
   
   #world.transitioning {
     transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
@@ -154,6 +195,8 @@
     opacity: 0;
     scale: 0.02;
     pointer-events: none;
+    contain: layout style;
+    backface-visibility: hidden;
     transition:
       transform .55s cubic-bezier(0.22, 1, 0.36, 1),
       scale .72s cubic-bezier(0.16, 1, 0.3, 1),
@@ -189,6 +232,8 @@
     display: block;
     pointer-events: none; 
     border-radius: inherit;
+    backface-visibility: hidden;
+    transform: translateZ(0);
     transition: border-radius .45s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
@@ -233,9 +278,63 @@
     transition: opacity .2s ease .25s, transform .2s ease .25s;
     pointer-events: none;
   }
+  .tile.focused .info,
+  .tile.unfocusing .info{
+    transform: none;
+    top: calc(100% + 9px * var(--focus-ui-scale, 1));
+    left: 0;
+    right: 0;
+    padding: calc(8px * var(--focus-ui-scale, 1)) 0 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: calc(12.5px * var(--focus-ui-scale, 1));
+    font-weight: 600;
+    line-height: 1.45;
+  }
   .tile.focused .info{
     opacity: 1;
-    transform: none;
+  }
+  .tile.unfocusing .info{
+    opacity: 0;
+    transition: opacity .15s ease;
+  }
+
+  @media (min-width: 641px) {
+    .tile.focused .caption{
+      padding: calc(18px * var(--focus-ui-scale, 1)) calc(10px * var(--focus-ui-scale, 1)) calc(7px * var(--focus-ui-scale, 1));
+      font-size: calc(9.5px * var(--focus-ui-scale, 1));
+    }
+
+    .tile.focused .info,
+    .tile.unfocusing .info{
+      font-size: calc(9px * var(--focus-ui-scale, 1));
+    }
+
+    .tile.focused .caption,
+    .tile.focused .info,
+    .tile.unfocusing .caption{
+      opacity: 0;
+      transition: opacity .32s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .tile.focused.focus-settled .caption,
+    .tile.focused.focus-settled .info{
+      opacity: 1;
+    }
+
+    .tile.focused.focus-exiting .caption,
+    .tile.focused.focus-exiting .info{
+      opacity: 0;
+      transition: opacity .3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .tile.focus-entering .caption,
+    .tile.focus-entering .info{
+      opacity: 0;
+      transition: opacity .3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
   }
 
   .tile .placeholder{
@@ -262,8 +361,8 @@
     <div class="name">Elias Andre Archive | © 2026 All rights reserved</div>
   </div>
   <div class="category-picker">
-    <label for="category-select">Collection</label>
-    <select id="category-select" aria-label="Choose a collection"></select>
+    <span class="collection-label">Collection</span>
+    <nav class="category-nav" id="category-nav" aria-label="Choose a collection"></nav>
   </div>
   <div class="hint">Drag to pan · click a piece to focus</div>
 
@@ -274,6 +373,9 @@
 <script>
 let MEDIA = [];
 let mediaBaseUrl = '';
+let categories = [];
+let activeCategory = null;
+let categorySwitching = false;
 
 const SIZES = { sm: 130, md: 190, lg: 250 };
 const ROTATIONS = [-3.4, 1.8, -2.2, 3.7, -1.3, 2.8, -3.9, 1.1, 3.1, -2.7, 1.6, -3.2, 2.4, -1.8, 3.9, -2.5, 1.4];
@@ -337,6 +439,7 @@ function mediaUrl(item){
 }
 
 function initLayout(items = MEDIA) {
+  world.querySelectorAll('video').forEach(video => videoVisibilityObserver.unobserve(video));
   world.replaceChildren();
   placedRects = [];
   overviewCenter = { x: CENTER, y: CENTER };
@@ -346,7 +449,7 @@ function initLayout(items = MEDIA) {
     .map((item, i) => ({ item, i, s: SIZES[item.size] || SIZES.md }))
     .sort((a, b) => b.s - a.s);
 
-  placementOrder.forEach(({ item, i, s }) => {
+  placementOrder.forEach(({ item, i, s }, switchOrder) => {
     const ratio = (item.w && item.h) ? (item.w / item.h) : (4/3);
     
     const baseArea = s * s * 1.15; 
@@ -364,6 +467,7 @@ function initLayout(items = MEDIA) {
     tile.style.top = (y - h/2) + 'px';
     tile.style.transform = `rotate(${rot}deg)`;
     tile.style.setProperty('--card-shadow', CARD_SHADOWS[i % CARD_SHADOWS.length]);
+    tile.style.setProperty('--switch-order', switchOrder);
     
     tile.dataset.cx = x;
     tile.dataset.cy = y;
@@ -383,14 +487,17 @@ function initLayout(items = MEDIA) {
       mediaEl.loop = true;
       mediaEl.playsInline = true;
       mediaEl.preload = 'auto';
+      mediaEl.disablePictureInPicture = true;
       mediaEl.setAttribute('muted', '');
       mediaEl.setAttribute('autoplay', '');
       mediaEl.setAttribute('loop', '');
       mediaEl.setAttribute('playsinline', '');
       mediaEl.setAttribute('webkit-playsinline', '');
+      mediaEl.setAttribute('disableRemotePlayback', '');
 
       const revealWhenPlaying = () => revealTile(tile, placeholder);
       const tryPlayback = () => {
+        if (document.hidden || mediaEl.dataset.offscreen === 'true') return;
         const playAttempt = mediaEl.play();
         if (playAttempt?.then) {
           playAttempt
@@ -413,6 +520,7 @@ function initLayout(items = MEDIA) {
     } else {
       mediaEl = document.createElement('img');
       mediaEl.loading = 'lazy';
+      mediaEl.decoding = 'async';
       mediaEl.draggable = false;
       mediaEl.addEventListener('load', () => revealTile(tile, placeholder), { once: true });
       mediaEl.addEventListener('error', () => {
@@ -440,6 +548,7 @@ function initLayout(items = MEDIA) {
     tile.addEventListener('error', () => {}, true);
 
     world.appendChild(tile);
+    if (item.type === 'video') videoVisibilityObserver.observe(mediaEl);
   });
 
   if (placedRects.length) {
@@ -457,9 +566,25 @@ function initLayout(items = MEDIA) {
 }
 
 const stage = document.getElementById('stage');
-const categorySelect = document.getElementById('category-select');
+const categoryNav = document.getElementById('category-nav');
 const DESKTOP_FOCUS_ZOOM = 2.4;
 const FOCUS_GUTTER = 24;
+const videoVisibilityObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    const video = entry.target;
+    if (entry.isIntersecting) {
+      delete video.dataset.offscreen;
+      if (!document.hidden) video.play().catch(() => {});
+    } else {
+      video.dataset.offscreen = 'true';
+      if (!video.paused) video.pause();
+    }
+  });
+}, {
+  root: stage,
+  rootMargin: '140px',
+  threshold: 0.01,
+});
 
 function getOverviewZoom(){
   // Keep the original desktop composition, but give the world some breathing
@@ -476,17 +601,21 @@ function getOverviewPan(overviewZoom){
 }
 
 function getFocusZoom(tile){
-  const { width: tileWidth, height: tileHeight } = getFocusedBounds(tile);
-  const horizontalGutter = window.innerWidth < 600 ? FOCUS_GUTTER : 56;
-  const verticalGutter = window.innerWidth < 600 ? 96 : 72;
+  const isMobile = window.innerWidth < 600;
+  const focusedBounds = getFocusedBounds(tile);
+  const tileWidth = isMobile ? focusedBounds.width : tile.offsetWidth;
+  const tileHeight = isMobile ? focusedBounds.height : tile.offsetHeight;
+  const horizontalGutter = isMobile ? FOCUS_GUTTER : 36;
+  const verticalGutter = isMobile ? 96 : 56;
   const availableWidth = Math.max(1, window.innerWidth - horizontalGutter * 2);
   const availableHeight = Math.max(1, window.innerHeight - verticalGutter * 2);
 
-  return Math.min(
-    DESKTOP_FOCUS_ZOOM,
+  const fitZoom = Math.min(
+    isMobile ? DESKTOP_FOCUS_ZOOM : Infinity,
     availableWidth / tileWidth,
     availableHeight / tileHeight
   );
+  return isMobile ? fitZoom : fitZoom * 0.5;
 }
 
 function getFocusedBounds(tile){
@@ -518,10 +647,18 @@ updateTransform();
 
 function focusTile(tile){
   focusedTile = tile;
+  focusedTile.classList.remove('focus-settled');
   focusedTile.classList.add('focused');
   world.classList.add('has-focus');
 
   zoom = getFocusZoom(tile);
+  const uiScale = window.innerWidth >= 641
+    ? Math.min(1, Array.from(world.querySelectorAll('.tile')).reduce(
+        (referenceZoom, candidate) => Math.min(referenceZoom, getFocusZoom(candidate)),
+        zoom
+      ) / zoom)
+    : 1 / zoom;
+  tile.style.setProperty('--focus-ui-scale', String(uiScale));
   const cx = parseFloat(tile.dataset.cx);
   const cy = parseFloat(tile.dataset.cy);
   const bounds = getFocusedBounds(tile);
@@ -531,6 +668,8 @@ function focusTile(tile){
 
 function clearFocus(){
   const previousTile = focusedTile;
+  previousTile?.classList.remove('focus-settled');
+  previousTile?.classList.add('unfocusing');
   focusedTile?.classList.remove('focused');
   world.classList.remove('has-focus');
   focusedTile = null;
@@ -543,11 +682,23 @@ function clearFocus(){
   } else {
     pan = { x: 0, y: 0 };
   }
+
+  setTimeout(() => {
+    previousTile?.classList.remove('unfocusing', 'focus-exiting');
+    previousTile?.style.removeProperty('--focus-ui-scale');
+  }, 600);
 }
 
 let dragging = false, dragStart = null, panStart = null, moved = false, dragStartTarget = null;
 let lastPointer = null, velocity = { x: 0, y: 0 };
 let inertiaFrame = null, transitionLocked = false, transitionTimer = null;
+let dragFrame = null;
+
+function flushDragFrame(){
+  if (dragFrame) cancelAnimationFrame(dragFrame);
+  dragFrame = null;
+  updateTransform();
+}
 
 function stopInertia(){
   if (inertiaFrame) cancelAnimationFrame(inertiaFrame);
@@ -589,7 +740,42 @@ function animateCamera(change){
   transitionTimer = setTimeout(() => {
     world.classList.remove('transitioning');
     transitionLocked = false;
+    focusedTile?.classList.remove('focus-entering');
+    focusedTile?.classList.add('focus-settled');
   }, 600);
+}
+
+function beginFocus(tile){
+  if (window.innerWidth < 641) {
+    animateCamera(() => focusTile(tile));
+    return;
+  }
+
+  transitionLocked = true;
+  tile.classList.add('focus-entering');
+
+  setTimeout(() => {
+    animateCamera(() => focusTile(tile));
+  }, 320);
+}
+
+function beginClearFocus(){
+  if (window.innerWidth < 641) {
+    animateCamera(clearFocus);
+    return;
+  }
+
+  const exitingTile = focusedTile;
+  transitionLocked = true;
+  exitingTile?.classList.add('focus-exiting');
+
+  setTimeout(() => {
+    if (focusedTile !== exitingTile) {
+      transitionLocked = false;
+      return;
+    }
+    animateCamera(clearFocus);
+  }, 320);
 }
 
 stage.addEventListener('pointerdown', (e) => {
@@ -620,18 +806,25 @@ stage.addEventListener('pointermove', (e) => {
   if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
   pan.x = panStart.x + dx;
   pan.y = panStart.y + dy;
-  updateTransform();
+  if (!dragFrame) {
+    dragFrame = requestAnimationFrame(() => {
+      dragFrame = null;
+      updateTransform();
+    });
+  }
 });
 
 stage.addEventListener('pointerup', (e) => {
   if (!dragging) return;
   dragging = false; 
   stage.classList.remove('grabbing');
+  flushDragFrame();
   
   if (!moved) {
     const tile = dragStartTarget ? dragStartTarget.closest('.tile') : null;
     if (focusedTile || tile) {
-      animateCamera(() => focusedTile ? clearFocus() : focusTile(tile));
+      if (focusedTile) beginClearFocus();
+      else beginFocus(tile);
     }
   } else {
     if (performance.now() - lastPointer.time > 80) {
@@ -653,6 +846,8 @@ stage.addEventListener('pointercancel', () => {
   dragging = false; 
   stage.classList.remove('grabbing'); 
   dragStartTarget = null;
+  if (dragFrame) cancelAnimationFrame(dragFrame);
+  dragFrame = null;
   stopInertia();
 });
 
@@ -672,7 +867,7 @@ function categoryLabel(value){
     .replace(/\b\w/g, letter => letter.toUpperCase());
 }
 
-function showCategory(category){
+function renderCategory(category){
   stopInertia();
   focusedTile?.classList.remove('focused');
   focusedTile = null;
@@ -686,6 +881,50 @@ function showCategory(category){
   zoom = getOverviewZoom();
   pan = getOverviewPan(zoom);
   updateTransform();
+}
+
+function updateCategoryNav(category, disabled = false){
+  categoryNav.querySelectorAll('button').forEach(button => {
+    const isCurrent = button.dataset.category === category;
+    button.toggleAttribute('aria-current', isCurrent);
+    if (isCurrent) button.setAttribute('aria-current', 'page');
+    button.disabled = disabled;
+  });
+}
+
+async function showCategory(category, { animate = true, updateUrl = true, replaceUrl = false } = {}){
+  if (!categories.includes(category) || categorySwitching || category === activeCategory) return;
+
+  categorySwitching = true;
+  updateCategoryNav(activeCategory, true);
+
+  if (animate && activeCategory) {
+    world.classList.add('collection-exiting');
+    const outgoingCount = world.querySelectorAll('.tile').length;
+    await new Promise(resolve => setTimeout(resolve, 440 + Math.min(240, outgoingCount * 12)));
+  }
+
+  renderCategory(category);
+  activeCategory = category;
+  updateCategoryNav(category, true);
+  if (animate) world.classList.add('collection-entering');
+
+  if (updateUrl) {
+    const method = replaceUrl ? 'replaceState' : 'pushState';
+    history[method]({ category }, '', `#${encodeURIComponent(category)}`);
+  }
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    world.classList.remove('collection-exiting');
+  }));
+
+  if (animate) {
+    const incomingCount = world.querySelectorAll('.tile').length;
+    await new Promise(resolve => setTimeout(resolve, 760 + Math.min(240, incomingCount * 12)));
+    world.classList.remove('collection-entering');
+  }
+  categorySwitching = false;
+  updateCategoryNav(category, false);
 }
 
 async function loadArchive(){
@@ -707,30 +946,51 @@ async function loadArchive(){
       };
     });
 
-    const categories = [...new Set(MEDIA.map(item => item.category))];
+    categories = [...new Set(MEDIA.map(item => item.category))];
     categories.forEach(category => {
-      const option = document.createElement('option');
-      option.value = category;
-      option.textContent = categoryLabel(category);
-      categorySelect.appendChild(option);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.category = category;
+      button.textContent = categoryLabel(category);
+      button.addEventListener('click', () => showCategory(category));
+      categoryNav.appendChild(button);
     });
 
     if (categories.length) {
-      categorySelect.value = categories[0];
-      showCategory(categories[0]);
+      const requestedCategory = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+      const initialCategory = categories.includes(requestedCategory) ? requestedCategory : categories[0];
+      await showCategory(initialCategory, { animate: false, updateUrl: true, replaceUrl: true });
     } else {
-      categorySelect.disabled = true;
+      categoryNav.setAttribute('aria-disabled', 'true');
       world.classList.add('ready');
     }
   } catch (error) {
     console.error('Could not load the archive:', error);
-    categorySelect.disabled = true;
-    categorySelect.replaceChildren(new Option('Archive unavailable', ''));
+    categoryNav.setAttribute('aria-disabled', 'true');
+    categoryNav.textContent = 'Archive unavailable';
     world.classList.add('ready');
   }
 }
 
-categorySelect.addEventListener('change', event => showCategory(event.target.value));
+window.addEventListener('popstate', () => {
+  const category = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+  if (categories.includes(category) && category !== activeCategory) {
+    showCategory(category, { updateUrl: false });
+  }
+});
+
+document.addEventListener('visibilitychange', () => {
+  world.querySelectorAll('video').forEach(video => {
+    if (document.hidden) {
+      video.dataset.resumePlayback = video.paused ? '' : 'true';
+      if (!video.paused) video.pause();
+    } else if (video.dataset.resumePlayback === 'true' && video.dataset.offscreen !== 'true') {
+      delete video.dataset.resumePlayback;
+      video.play().catch(() => {});
+    }
+  });
+});
+
 loadArchive();
 </script>
 </body>
