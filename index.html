@@ -17,7 +17,7 @@
     --yellow: #e6b13c;
     --blue: #4c74a8;
     --font: 'Inter', system-ui, sans-serif;
-    --camera-duration: .78s;
+    --camera-duration: .62s;
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
   html,body{
@@ -664,7 +664,7 @@ function isPortraitMobile(){
 }
 
 function getCameraDuration(){
-  return window.innerWidth <= 640 ? 620 : 780;
+  return 620;
 }
 
 function getOverviewZoom(){
