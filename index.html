@@ -196,6 +196,7 @@
     overflow: hidden;
     touch-action: none;
     overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
   }
   #stage.grabbing{ cursor: grabbing; }
   #world{
@@ -212,7 +213,7 @@
   }
   
   #world.transitioning {
-    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+    transition: transform 0.95s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.42s ease;
   }
 
   #world.has-focus .tile:not(.focused) {
@@ -237,8 +238,11 @@
     opacity: 0;
     scale: 0.02;
     pointer-events: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    backface-visibility: hidden;
     transition:
-      transform .55s cubic-bezier(0.22, 1, 0.36, 1),
+      transform .95s cubic-bezier(0.65, 0, 0.35, 1),
       scale .72s cubic-bezier(0.16, 1, 0.3, 1),
       border-color .15s ease,
       border-width .3s ease,
@@ -247,6 +251,8 @@
       filter .6s ease,
       opacity .42s ease;
   }
+  .tile:focus{ outline: none; }
+  .tile.video-tile{ background: #111; }
   .tile.media-ready{
     opacity: 1;
     scale: 1;
@@ -273,7 +279,20 @@
     pointer-events: none; 
     border-radius: inherit;
     transition: border-radius .45s cubic-bezier(0.22, 1, 0.36, 1);
+    backface-visibility: hidden;
+    transform: translateZ(0);
   }
+
+  @media (max-width: 640px){
+    #world.has-focus .tile:not(.focused){
+      filter: none;
+      opacity: .22;
+    }
+    .tile{
+      box-shadow: 0 7px 18px -11px rgba(28,27,23,.26);
+    }
+  }
+  .tile video{ background: #111; }
 
   .tile .caption{
     position: absolute; left:0; right:0; bottom:0;
@@ -374,6 +393,7 @@
 let MEDIA = [];
 let mediaBaseUrl = '';
 let mobileViewMode = 'stream';
+let streamMediaObserver = null;
 
 const SIZES = { sm: 130, md: 190, lg: 250 };
 const ROTATIONS = [-3.4, 1.8, -2.2, 3.7, -1.3, 2.8, -3.9, 1.1, 3.1, -2.7, 1.6, -3.2, 2.4, -1.8, 3.9, -2.5, 1.4];
@@ -484,11 +504,25 @@ function buildPortraitPlan(entries){
 }
 
 function initLayout(items = MEDIA) {
+  streamMediaObserver?.disconnect();
+  streamMediaObserver = null;
   world.replaceChildren();
   placedRects = [];
   overviewCenter = { x: CENTER, y: CENTER };
   world.classList.remove('ready');
   const portraitLayout = isPortraitMobile();
+  if (portraitLayout) {
+    streamMediaObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const video = entry.target;
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+    }, { root: stage, rootMargin: '180px 0px', threshold: 0 });
+  }
 
   const sourceOrder = items.map((item, i) => {
     const s = SIZES[item.size] || SIZES.md;
@@ -519,7 +553,7 @@ function initLayout(items = MEDIA) {
     const rot = ROTATIONS[i % ROTATIONS.length] * (portraitLayout ? .58 : 1);
 
     const tile = document.createElement('div');
-    tile.className = 'tile';
+    tile.className = `tile ${item.type}-tile`;
     tile.style.width = w + 'px';
     tile.style.height = h + 'px';
     tile.style.left = (x - w/2) + 'px';
@@ -602,6 +636,7 @@ function initLayout(items = MEDIA) {
     tile.addEventListener('error', () => {}, true);
 
     world.appendChild(tile);
+    if (streamMediaObserver && item.type === 'video') streamMediaObserver.observe(mediaEl);
   });
 
   if (placedRects.length) {
@@ -704,13 +739,26 @@ function getFocusedBounds(tile){
 
 let zoom = getOverviewZoom(), pan = getOverviewPan(zoom);
 let focusedTile = null;
+let preFocusView = null;
+let panRenderFrame = null;
 
 function updateTransform(){
-  world.style.transform = `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
+  world.style.transform = `translate3d(-50%, -50%, 0) translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`;
+}
+
+function scheduleTransform(){
+  if (panRenderFrame) return;
+  panRenderFrame = requestAnimationFrame(() => {
+    panRenderFrame = null;
+    updateTransform();
+  });
 }
 updateTransform();
 
 function focusTile(tile){
+  if (!focusedTile) {
+    preFocusView = { zoom, pan: { x: pan.x, y: pan.y } };
+  }
   focusedTile = tile;
   focusedTile.classList.add('focused');
   world.classList.add('has-focus');
@@ -730,9 +778,11 @@ function clearFocus(){
   focusedTile?.style.removeProperty('--focus-ui-scale');
   world.classList.remove('has-focus');
   focusedTile = null;
-  zoom = getOverviewZoom();
+  zoom = preFocusView?.zoom ?? getOverviewZoom();
 
-  if (isPortraitMobile() && previousTile) {
+  if (isPortraitMobile() && preFocusView) {
+    pan = { ...preFocusView.pan };
+  } else if (isPortraitMobile() && previousTile) {
     const cy = parseFloat(previousTile.dataset.cy);
     pan = {
       x: CENTER - overviewCenter.x * zoom,
@@ -745,6 +795,7 @@ function clearFocus(){
   } else {
     pan = { x: 0, y: 0 };
   }
+  preFocusView = null;
 }
 
 let dragging = false, dragStart = null, panStart = null, moved = false, dragStartTarget = null;
@@ -803,7 +854,7 @@ function animateCamera(change){
   transitionTimer = setTimeout(() => {
     world.classList.remove('transitioning');
     transitionLocked = false;
-  }, 600);
+  }, 980);
 }
 
 stage.addEventListener('pointerdown', (e) => {
@@ -834,7 +885,7 @@ stage.addEventListener('pointermove', (e) => {
   if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
   pan.x = isPortraitMobile() ? panStart.x : panStart.x + dx;
   pan.y = isPortraitMobile() ? clampPortraitPanY(panStart.y + dy) : panStart.y + dy;
-  updateTransform();
+  scheduleTransform();
 });
 
 stage.addEventListener('pointerup', (e) => {
@@ -877,7 +928,7 @@ window.addEventListener('resize', () => {
     zoom = getOverviewZoom();
     pan = getOverviewPan(zoom);
   }
-  updateTransform();
+  scheduleTransform();
 });
 
 function categoryLabel(value){
@@ -891,6 +942,7 @@ function showCategory(category){
   focusedTile?.classList.remove('focused');
   focusedTile?.style.removeProperty('--focus-ui-scale');
   focusedTile = null;
+  preFocusView = null;
   world.classList.remove('has-focus', 'transitioning');
   transitionLocked = false;
   clearTimeout(transitionTimer);
