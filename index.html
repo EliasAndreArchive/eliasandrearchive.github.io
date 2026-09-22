@@ -1020,7 +1020,7 @@ let lastPointer = null, velocity = { x: 0, y: 0 };
 let inertiaFrame = null, transitionLocked = false, transitionTimer = null;
 let dragFrame = null;
 let focusMotionFrame = null;
-const FOCUS_MOTION_DURATION = 330;
+const FOCUS_MOTION_DURATION = 500;
 
 function flushDragFrame(){
   if (dragFrame) cancelAnimationFrame(dragFrame);
@@ -1058,25 +1058,52 @@ function startInertia(){
   inertiaFrame = requestAnimationFrame(glide);
 }
 
-function matrixCss(matrix){
-  return `matrix(${matrix.a}, ${matrix.b}, ${matrix.c}, ${matrix.d}, ${matrix.e}, ${matrix.f})`;
+function transformParts(matrix){
+  const scaleX = Math.hypot(matrix.a, matrix.b) || 1;
+  return {
+    x: matrix.e,
+    y: matrix.f,
+    rotation: Math.atan2(matrix.b, matrix.a),
+    scaleX,
+    scaleY: (matrix.a * matrix.d - matrix.b * matrix.c) / scaleX,
+  };
+}
+
+function shortestRotation(from, to){
+  let distance = (to - from + Math.PI) % (Math.PI * 2) - Math.PI;
+  if (distance < -Math.PI) distance += Math.PI * 2;
+  return distance;
+}
+
+function interpolatedTransform(from, to, progress){
+  const rotation = from.rotation + shortestRotation(from.rotation, to.rotation) * progress;
+  const x = from.x + (to.x - from.x) * progress;
+  const y = from.y + (to.y - from.y) * progress;
+  const scaleX = from.scaleX + (to.scaleX - from.scaleX) * progress;
+  const scaleY = from.scaleY + (to.scaleY - from.scaleY) * progress;
+  return `translate3d(${x}px, ${y}px, 0) rotate(${rotation}rad) scale(${scaleX}, ${scaleY})`;
+}
+
+function easeOutQuart(progress){
+  return 1 - Math.pow(1 - progress, 4);
 }
 
 function animateTransformFrames(motions, startTime, duration){
+  const preparedMotions = motions.map(motion => ({
+    ...motion,
+    fromParts: transformParts(motion.from),
+    toParts: transformParts(motion.to),
+  }));
   return new Promise(resolve => {
     function frame(now){
       const rawProgress = Math.min(1, Math.max(0, (now - startTime) / duration));
-      const progress = rawProgress * rawProgress * (3 - 2 * rawProgress);
-      motions.forEach(({ element, from, to }) => {
-        const current = new DOMMatrix([
-          from.a + (to.a - from.a) * progress,
-          from.b + (to.b - from.b) * progress,
-          from.c + (to.c - from.c) * progress,
-          from.d + (to.d - from.d) * progress,
-          from.e + (to.e - from.e) * progress,
-          from.f + (to.f - from.f) * progress,
-        ]);
-        element.style.setProperty('transform', matrixCss(current), 'important');
+      const progress = easeOutQuart(rawProgress);
+      preparedMotions.forEach(({ element, fromParts, toParts }) => {
+        element.style.setProperty(
+          'transform',
+          interpolatedTransform(fromParts, toParts, progress),
+          'important'
+        );
       });
 
       if (rawProgress < 1) {
@@ -1095,6 +1122,7 @@ function animateTransformFrames(motions, startTime, duration){
 
 function animateCamera(change, motionTile){
   transitionLocked = true;
+  const duration = FOCUS_MOTION_DURATION;
   if (focusMotionFrame) cancelAnimationFrame(focusMotionFrame);
 
   const beforeWorld = new DOMMatrix(getComputedStyle(world).transform);
@@ -1132,7 +1160,7 @@ function animateCamera(change, motionTile){
       restorePriority: tilePriority,
     });
   }
-  const animation = animateTransformFrames(motions, startTime, FOCUS_MOTION_DURATION);
+  const animation = animateTransformFrames(motions, startTime, duration);
 
   clearTimeout(transitionTimer);
   transitionTimer = setTimeout(async () => {
@@ -1142,7 +1170,7 @@ function animateCamera(change, motionTile){
     transitionLocked = false;
     focusedTile?.classList.remove('focus-entering');
     focusedTile?.classList.add('focus-settled');
-  }, FOCUS_MOTION_DURATION);
+  }, duration);
 }
 
 function beginFocus(tile){
