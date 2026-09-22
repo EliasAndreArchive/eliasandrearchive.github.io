@@ -17,6 +17,7 @@
     --yellow: #e6b13c;
     --blue: #4c74a8;
     --font: 'Inter', system-ui, sans-serif;
+    --camera-duration: .78s;
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
   html,body{
@@ -213,7 +214,7 @@
   }
   
   #world.transitioning {
-    transition: transform 0.78s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.36s ease;
+    transition: transform var(--camera-duration) cubic-bezier(0.65, 0, 0.35, 1), opacity 0.3s ease;
   }
 
   #world.has-focus .tile:not(.focused) {
@@ -241,7 +242,7 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
     transition:
-      transform .78s cubic-bezier(0.65, 0, 0.35, 1),
+      transform var(--camera-duration) cubic-bezier(0.65, 0, 0.35, 1),
       scale .72s cubic-bezier(0.16, 1, 0.3, 1),
       border-color .15s ease,
       border-width .3s ease,
@@ -341,6 +342,7 @@
   }
 
   @media (max-width: 640px){
+    :root{ --camera-duration: .62s; }
     .tile:hover:not(.focused) .caption{
       opacity: 0;
       transform: translateY(4px);
@@ -348,7 +350,7 @@
     .tile.focused .caption,
     .tile.focused .info{
       opacity: 0;
-      transition: none;
+      transition: opacity .2s ease;
     }
     .tile.focused.focus-settled .caption,
     .tile.focused.focus-settled .info{
@@ -665,6 +667,10 @@ function isPortraitMobile(){
   return mobileViewMode === 'stream' && window.innerWidth <= 640 && window.innerHeight > window.innerWidth;
 }
 
+function getCameraDuration(){
+  return window.innerWidth <= 640 ? 620 : 780;
+}
+
 function getOverviewZoom(){
   if (isPortraitMobile()) return .74;
   // Keep the original desktop composition, but give the world some breathing
@@ -799,7 +805,7 @@ function clearFocus(){
   focusRestoreTimer = setTimeout(() => {
     previousTile?.classList.remove('focused');
     previousTile?.style.removeProperty('--focus-ui-scale');
-  }, 780);
+  }, getCameraDuration());
 }
 
 let dragging = false, dragStart = null, panStart = null, moved = false, dragStartTarget = null;
@@ -863,7 +869,7 @@ function animateCamera(change){
       world.classList.add('has-focus');
       focusedTile.classList.add('focus-settled');
     }
-  }, 810);
+  }, getCameraDuration() + 30);
 }
 
 stage.addEventListener('pointerdown', (e) => {
