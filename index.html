@@ -393,6 +393,14 @@ const CENTER = 700;
 const GAP = 12; 
 let placedRects = [];
 let overviewCenter = { x: CENTER, y: CENTER };
+let overviewBounds = { left: CENTER, right: CENTER, top: CENTER, bottom: CENTER };
+let portraitRows = [];
+let portraitCycleHeight = 0;
+let portraitWrapEnabled = false;
+
+function isPortraitMobile(){
+  return window.innerWidth <= 640 && window.innerHeight > window.innerWidth;
+}
 
 function overlaps(a, b, pad){
   return a.left - pad < b.right && a.right + pad > b.left &&
@@ -438,26 +446,98 @@ function mediaUrl(item){
   return mediaBaseUrl.replace(/\/?$/, '/') + item.file.replace(/^\//, '');
 }
 
+function buildPortraitPlan(entries){
+  const remaining = [...entries];
+  const plan = new Map();
+  const unitCost = { lg: 6, md: 3, sm: 2 };
+  const rowShifts = [-8, 7, -3, 10, 2, -7];
+  const rowGaps = [24, 32, 20, 28, 18, 30];
+  const verticalJitter = [-5, 3, 0, 5, -3, 2];
+  let top = 0;
+  let rowIndex = 0;
+
+  portraitRows = [];
+
+  while (remaining.length) {
+    const row = [remaining.shift()];
+    let used = unitCost[row[0].item.size] || 3;
+
+    for (let cursor = 0; cursor < remaining.length && used < 6;) {
+      const cost = unitCost[remaining[cursor].item.size] || 3;
+      if (used + cost <= 6) {
+        row.push(remaining.splice(cursor, 1)[0]);
+        used += cost;
+      } else {
+        cursor++;
+      }
+    }
+
+    const gap = row.length === 3 ? 10 : 14;
+    const rowWidth = row.reduce((sum, entry) => sum + entry.w, 0) + gap * (row.length - 1);
+    const rowHeight = Math.max(...row.map(entry => entry.h));
+    let left = CENTER - rowWidth / 2 + rowShifts[rowIndex % rowShifts.length];
+    let rowTop = Infinity;
+    let rowBottom = -Infinity;
+
+    row.forEach((entry, itemIndex) => {
+      const y = top + rowHeight / 2 + verticalJitter[(rowIndex + itemIndex) % verticalJitter.length];
+      const x = left + entry.w / 2;
+      plan.set(entry.i, { x, y, rowIndex });
+      rowTop = Math.min(rowTop, y - entry.h / 2);
+      rowBottom = Math.max(rowBottom, y + entry.h / 2);
+      placedRects.push({ left, top: y - entry.h / 2, right: left + entry.w, bottom: y + entry.h / 2 });
+      left += entry.w + gap;
+    });
+
+    portraitRows.push({ top: rowTop, bottom: rowBottom, tiles: [] });
+    top = rowBottom + rowGaps[rowIndex % rowGaps.length];
+    rowIndex++;
+  }
+
+  const contentTop = Math.min(...portraitRows.map(row => row.top));
+  const contentBottom = Math.max(...portraitRows.map(row => row.bottom));
+  portraitCycleHeight = contentBottom - contentTop + 34;
+  return plan;
+}
+
 function initLayout(items = MEDIA) {
   world.querySelectorAll('video').forEach(video => videoVisibilityObserver.unobserve(video));
   world.replaceChildren();
   placedRects = [];
   overviewCenter = { x: CENTER, y: CENTER };
   world.classList.remove('ready');
+  const portraitLayout = isPortraitMobile();
+  portraitWrapEnabled = false;
 
-  const placementOrder = items
-    .map((item, i) => ({ item, i, s: SIZES[item.size] || SIZES.md }))
-    .sort((a, b) => b.s - a.s);
-
-  placementOrder.forEach(({ item, i, s }, switchOrder) => {
+  const mobileWidth = Math.max(280, window.innerWidth - 40);
+  const portraitWidths = {
+    lg: mobileWidth,
+    md: (mobileWidth - 14) / 2,
+    sm: (mobileWidth - 20) / 3,
+  };
+  const sourceOrder = items.map((item, i) => {
+    const s = SIZES[item.size] || SIZES.md;
     const ratio = (item.w && item.h) ? (item.w / item.h) : (4/3);
-    
-    const baseArea = s * s * 1.15; 
-    const w = Math.round(Math.sqrt(baseArea * ratio));
-    const h = Math.round(Math.sqrt(baseArea / ratio));
-    
-    const { x, y } = findSpot(w, h);
-    const rot = ROTATIONS[i % ROTATIONS.length];
+    if (portraitLayout) {
+      const w = portraitWidths[item.size] || portraitWidths.md;
+      return { item, i, s, w: Math.round(w), h: Math.round(w / ratio) };
+    }
+    const baseArea = s * s * 1.15;
+    return {
+      item,
+      i,
+      s,
+      w: Math.round(Math.sqrt(baseArea * ratio)),
+      h: Math.round(Math.sqrt(baseArea / ratio)),
+    };
+  });
+  const placementOrder = portraitLayout ? sourceOrder : sourceOrder.sort((a, b) => b.s - a.s);
+  const portraitPlan = portraitLayout ? buildPortraitPlan(placementOrder) : null;
+
+  placementOrder.forEach(({ item, i, w, h }, switchOrder) => {
+    const placement = portraitLayout ? portraitPlan.get(i) : findSpot(w, h);
+    const { x, y } = placement;
+    const rot = ROTATIONS[i % ROTATIONS.length] * (portraitLayout ? .55 : 1);
 
     const tile = document.createElement('div');
     tile.className = 'tile';
@@ -471,6 +551,10 @@ function initLayout(items = MEDIA) {
     
     tile.dataset.cx = x;
     tile.dataset.cy = y;
+    if (portraitLayout) {
+      tile.dataset.portraitRow = placement.rowIndex;
+      portraitRows[placement.rowIndex].tiles.push(tile);
+    }
 
     const placeholder = document.createElement('div');
     placeholder.className = 'placeholder';
@@ -560,6 +644,7 @@ function initLayout(items = MEDIA) {
       x: (left + right) / 2,
       y: (top + bottom) / 2,
     };
+    overviewBounds = { left, right, top, bottom };
   }
   
   world.classList.add('ready');
@@ -587,6 +672,7 @@ const videoVisibilityObserver = new IntersectionObserver(entries => {
 });
 
 function getOverviewZoom(){
+  if (isPortraitMobile()) return 1;
   // Keep the original desktop composition, but give the world some breathing
   // room on narrow screens instead of rendering it at a desktop-sized scale.
   return Math.min(1, Math.max(0.62, window.innerWidth / 580));
@@ -594,6 +680,12 @@ function getOverviewZoom(){
 
 function getOverviewPan(overviewZoom){
   if (window.innerWidth >= 600) return { x: 0, y: 0 };
+  if (isPortraitMobile()) {
+    return {
+      x: CENTER - overviewCenter.x * overviewZoom,
+      y: 88 - window.innerHeight / 2 + CENTER - overviewBounds.top * overviewZoom,
+    };
+  }
   return {
     x: CENTER - overviewCenter.x * overviewZoom,
     y: CENTER - overviewCenter.y * overviewZoom,
@@ -639,13 +731,41 @@ function getFocusedBounds(tile){
 
 let zoom = getOverviewZoom(), pan = getOverviewPan(zoom);
 let focusedTile = null;
+let preFocusView = null;
+
+function shiftPortraitRow(row, distance){
+  row.top += distance;
+  row.bottom += distance;
+  row.tiles.forEach(tile => {
+    const nextY = parseFloat(tile.dataset.cy) + distance;
+    tile.dataset.cy = nextY;
+    tile.style.top = (nextY - parseFloat(tile.style.height) / 2) + 'px';
+  });
+}
+
+function wrapPortraitRows(){
+  if (!isPortraitMobile() || !portraitWrapEnabled || focusedTile || !portraitCycleHeight) return;
+  const viewportOffset = window.innerHeight / 2 - CENTER + pan.y;
+  const buffer = 110;
+
+  portraitRows.forEach(row => {
+    while (viewportOffset + row.bottom * zoom < -buffer) {
+      shiftPortraitRow(row, portraitCycleHeight);
+    }
+    while (viewportOffset + row.top * zoom > window.innerHeight + buffer) {
+      shiftPortraitRow(row, -portraitCycleHeight);
+    }
+  });
+}
 
 function updateTransform(){
+  wrapPortraitRows();
   world.style.transform = `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
 }
 updateTransform();
 
 function focusTile(tile){
+  if (!focusedTile) preFocusView = { zoom, pan: { ...pan } };
   focusedTile = tile;
   focusedTile.classList.remove('focus-settled');
   focusedTile.classList.add('focused');
@@ -675,13 +795,17 @@ function clearFocus(){
   focusedTile = null;
   zoom = getOverviewZoom();
 
-  if (window.innerWidth < 600 && previousTile) {
+  if (isPortraitMobile() && preFocusView) {
+    zoom = preFocusView.zoom;
+    pan = { ...preFocusView.pan };
+  } else if (window.innerWidth < 600 && previousTile) {
     const cx = parseFloat(previousTile.dataset.cx);
     const cy = parseFloat(previousTile.dataset.cy);
     pan = { x: CENTER - cx * zoom, y: CENTER - cy * zoom };
   } else {
     pan = { x: 0, y: 0 };
   }
+  preFocusView = null;
 
   setTimeout(() => {
     previousTile?.classList.remove('unfocusing', 'focus-exiting');
@@ -716,7 +840,7 @@ function startInertia(){
     const decay = Math.pow(0.91, elapsed / 16.67);
     velocity.x *= decay;
     velocity.y *= decay;
-    pan.x += velocity.x * elapsed;
+    if (!isPortraitMobile()) pan.x += velocity.x * elapsed;
     pan.y += velocity.y * elapsed;
     updateTransform();
 
@@ -800,11 +924,12 @@ stage.addEventListener('pointermove', (e) => {
   const elapsed = Math.max(1, now - lastPointer.time);
   const nextVelocityX = (e.clientX - lastPointer.x) / elapsed;
   const nextVelocityY = (e.clientY - lastPointer.y) / elapsed;
-  velocity.x = velocity.x * 0.65 + nextVelocityX * 0.35;
+  velocity.x = isPortraitMobile() ? 0 : velocity.x * 0.65 + nextVelocityX * 0.35;
   velocity.y = velocity.y * 0.65 + nextVelocityY * 0.35;
   lastPointer = { x: e.clientX, y: e.clientY, time: now };
   if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
-  pan.x = panStart.x + dx;
+  if (isPortraitMobile() && moved) portraitWrapEnabled = true;
+  pan.x = isPortraitMobile() ? panStart.x : panStart.x + dx;
   pan.y = panStart.y + dy;
   if (!dragFrame) {
     dragFrame = requestAnimationFrame(() => {
