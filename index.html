@@ -761,7 +761,6 @@ function focusTile(tile){
   focusedTile = tile;
   focusedTile.classList.remove('focus-settled');
   focusedTile.classList.add('focused');
-  world.classList.add('has-focus');
 
   zoom = getFocusZoom(tile);
   tile.style.setProperty('--focus-ui-scale', String(1 / zoom));
@@ -860,7 +859,10 @@ function animateCamera(change){
   transitionTimer = setTimeout(() => {
     world.classList.remove('transitioning');
     transitionLocked = false;
-    focusedTile?.classList.add('focus-settled');
+    if (focusedTile) {
+      world.classList.add('has-focus');
+      focusedTile.classList.add('focus-settled');
+    }
   }, 810);
 }
 
