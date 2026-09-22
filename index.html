@@ -56,6 +56,7 @@
     pointer-events: none;
     white-space: nowrap;
   }
+  .mobile-hint{ display:none; }
 
   .category-picker{
     position: fixed;
@@ -137,6 +138,8 @@
       font-size: 12px;
     }
     .hint{ bottom: 76px; }
+    .desktop-hint{ display:none; }
+    .mobile-hint{ display:inline; }
   }
 
   /* ---------- stage / world ---------- */
@@ -304,9 +307,19 @@
   }
 
   @media (min-width: 641px) {
-    .tile.focused .caption{
-      padding: calc(18px * var(--focus-ui-scale, 1)) calc(10px * var(--focus-ui-scale, 1)) calc(7px * var(--focus-ui-scale, 1));
-      font-size: calc(9.5px * var(--focus-ui-scale, 1));
+    .tile.focused .caption,
+    .tile.unfocusing .caption{
+      top: auto;
+      bottom: calc(100% + 10px * var(--focus-ui-scale, 1));
+      padding: 0;
+      background: transparent;
+      border-radius: 0;
+      color: var(--ink);
+      font-size: calc(15px * var(--focus-ui-scale, 1));
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: .035em;
+      text-shadow: none;
     }
 
     .tile.focused .info,
@@ -355,7 +368,8 @@
       outline: none;
     }
 
-    .tile.focused .caption{
+    .tile.focused .caption,
+    .tile.unfocusing .caption{
       top: auto;
       bottom: calc(100% + 10px * var(--focus-ui-scale, 1));
       padding: 0;
@@ -367,8 +381,51 @@
       line-height: 1.2;
       letter-spacing: .035em;
       text-shadow: none;
-      opacity: 1;
       transform: none;
+      transition: opacity .32s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .tile.focused .caption,
+    .tile.focused .info{
+      opacity: 0;
+      transition: opacity .32s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .tile.focused.focus-settled .caption,
+    .tile.focused.focus-settled .info{
+      opacity: 1;
+    }
+
+    .tile.focused.focus-exiting .caption,
+    .tile.focused.focus-exiting .info,
+    .tile.unfocusing .caption,
+    .tile.unfocusing .info{
+      opacity: 0;
+      transition: opacity .3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  }
+
+  @media (max-width: 640px) and (orientation: portrait) {
+    #stage{
+      overflow-x: hidden;
+      overflow-y: auto;
+      touch-action: pan-y;
+      overscroll-behavior-y: none;
+      cursor: default;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    #stage::-webkit-scrollbar{ display:none; }
+    #stage.mobile-focus-mode{ overflow: hidden; }
+    #world{
+      position: relative;
+      top: 0;
+      left: 50%;
+      margin-left: -700px;
+      transform: none !important;
+    }
+    .tile.focused{
+      transform: translate(var(--mobile-focus-x, 0), var(--mobile-focus-y, 0)) scale(var(--mobile-focus-scale, 1)) rotate(0deg) !important;
     }
   }
 
@@ -399,7 +456,10 @@
     <span class="collection-label">Collection</span>
     <nav class="category-nav" id="category-nav" aria-label="Choose a collection"></nav>
   </div>
-  <div class="hint">Drag to pan · click a piece to focus</div>
+  <div class="hint">
+    <span class="desktop-hint">Drag to pan · click a piece to focus</span>
+    <span class="mobile-hint">Scroll to explore · tap a piece to focus</span>
+  </div>
 
   <div id="stage">
     <div id="world"></div>
@@ -431,7 +491,6 @@ let overviewCenter = { x: CENTER, y: CENTER };
 let overviewBounds = { left: CENTER, right: CENTER, top: CENTER, bottom: CENTER };
 let portraitRows = [];
 let portraitCycleHeight = 0;
-let portraitWrapEnabled = false;
 
 function isPortraitMobile(){
   return window.innerWidth <= 640 && window.innerHeight > window.innerWidth;
@@ -524,7 +583,7 @@ function buildPortraitPlan(entries){
       left += entry.w + gap;
     });
 
-    portraitRows.push({ top: rowTop, bottom: rowBottom, tiles: [] });
+    portraitRows.push({ top: rowTop, bottom: rowBottom, shift: 0, tiles: [] });
     top = rowBottom + rowGaps[rowIndex % rowGaps.length];
     rowIndex++;
   }
@@ -532,6 +591,15 @@ function buildPortraitPlan(entries){
   const contentTop = Math.min(...portraitRows.map(row => row.top));
   const contentBottom = Math.max(...portraitRows.map(row => row.bottom));
   portraitCycleHeight = contentBottom - contentTop + 34;
+  plan.forEach(placement => { placement.y += portraitCycleHeight; });
+  portraitRows.forEach(row => {
+    row.top += portraitCycleHeight;
+    row.bottom += portraitCycleHeight;
+  });
+  placedRects.forEach(rect => {
+    rect.top += portraitCycleHeight;
+    rect.bottom += portraitCycleHeight;
+  });
   return plan;
 }
 
@@ -542,7 +610,6 @@ function initLayout(items = MEDIA) {
   overviewCenter = { x: CENTER, y: CENTER };
   world.classList.remove('ready');
   const portraitLayout = isPortraitMobile();
-  portraitWrapEnabled = false;
 
   const mobileWidth = Math.max(280, window.innerWidth - 40);
   const portraitWidths = {
@@ -681,6 +748,16 @@ function initLayout(items = MEDIA) {
     };
     overviewBounds = { left, right, top, bottom };
   }
+
+  if (portraitLayout) {
+    world.style.height = Math.ceil(portraitCycleHeight * 3) + 'px';
+    requestAnimationFrame(() => {
+      stage.scrollTop = Math.max(0, overviewBounds.top - 88);
+      lastNativeScrollTop = stage.scrollTop;
+    });
+  } else {
+    world.style.height = '';
+  }
   
   world.classList.add('ready');
 }
@@ -772,39 +849,79 @@ function getFocusedBounds(tile){
 let zoom = getOverviewZoom(), pan = getOverviewPan(zoom);
 let focusedTile = null;
 let preFocusView = null;
+let lastNativeScrollTop = 0;
+let nativeScrollFrame = null;
+let nativeScrollAdjusting = false;
 
 function shiftPortraitRow(row, distance){
   row.top += distance;
   row.bottom += distance;
+  row.shift += distance;
   row.tiles.forEach(tile => {
-    const nextY = parseFloat(tile.dataset.cy) + distance;
-    tile.dataset.cy = nextY;
-    tile.style.top = (nextY - parseFloat(tile.style.height) / 2) + 'px';
+    tile.style.translate = `0 ${row.shift}px`;
   });
 }
 
-function wrapPortraitRows(){
-  if (!isPortraitMobile() || !portraitWrapEnabled || focusedTile || !portraitCycleHeight) return;
-  const viewportOffset = window.innerHeight / 2 - CENTER + pan.y;
+function recycleNativeRows(){
+  if (!isPortraitMobile() || focusedTile || !portraitCycleHeight || nativeScrollAdjusting) return;
+  const viewportTop = stage.scrollTop;
+  const viewportBottom = viewportTop + stage.clientHeight;
+  const direction = Math.sign(viewportTop - lastNativeScrollTop);
   const buffer = 110;
 
-  portraitRows.forEach(row => {
-    while (viewportOffset + row.bottom * zoom < -buffer) {
-      shiftPortraitRow(row, portraitCycleHeight);
-    }
-    while (viewportOffset + row.top * zoom > window.innerHeight + buffer) {
-      shiftPortraitRow(row, -portraitCycleHeight);
-    }
-  });
+  if (direction > 0) {
+    portraitRows.forEach(row => {
+      while (row.bottom < viewportTop - buffer) shiftPortraitRow(row, portraitCycleHeight);
+    });
+  } else if (direction < 0) {
+    portraitRows.forEach(row => {
+      while (row.top > viewportBottom + buffer) shiftPortraitRow(row, -portraitCycleHeight);
+    });
+  }
+
+  if (viewportTop > portraitCycleHeight * 1.8) {
+    nativeScrollAdjusting = true;
+    portraitRows.forEach(row => shiftPortraitRow(row, -portraitCycleHeight));
+    stage.scrollTop = viewportTop - portraitCycleHeight;
+    nativeScrollAdjusting = false;
+  } else if (viewportTop < portraitCycleHeight * .2) {
+    nativeScrollAdjusting = true;
+    portraitRows.forEach(row => shiftPortraitRow(row, portraitCycleHeight));
+    stage.scrollTop = viewportTop + portraitCycleHeight;
+    nativeScrollAdjusting = false;
+  }
+  lastNativeScrollTop = stage.scrollTop;
 }
 
 function updateTransform(){
-  wrapPortraitRows();
+  if (isPortraitMobile()) return;
   world.style.transform = `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
 }
 updateTransform();
 
 function focusTile(tile){
+  if (isPortraitMobile()) {
+    const rect = tile.getBoundingClientRect();
+    const hasInfo = Boolean(tile.querySelector('.info'));
+    const labelReserve = 30;
+    const infoReserve = hasInfo ? 64 : 0;
+    const availableWidth = Math.max(1, window.innerWidth - FOCUS_GUTTER * 2);
+    const availableHeight = Math.max(1, window.innerHeight - 192 - labelReserve - infoReserve);
+    const focusScale = Math.min(DESKTOP_FOCUS_ZOOM, availableWidth / rect.width, availableHeight / rect.height);
+    const targetY = window.innerHeight / 2 + (labelReserve - infoReserve) / 2;
+
+    preFocusView = { scrollTop: stage.scrollTop };
+    tile.style.setProperty('--mobile-focus-x', `${window.innerWidth / 2 - (rect.left + rect.width / 2)}px`);
+    tile.style.setProperty('--mobile-focus-y', `${targetY - (rect.top + rect.height / 2)}px`);
+    tile.style.setProperty('--mobile-focus-scale', String(focusScale));
+    tile.style.setProperty('--focus-ui-scale', String(1 / focusScale));
+    focusedTile = tile;
+    focusedTile.classList.add('focused');
+    world.classList.add('has-focus');
+    stage.classList.add('mobile-focus-mode');
+    return;
+  }
+
   if (!focusedTile) preFocusView = { zoom, pan: { ...pan } };
   focusedTile = tile;
   focusedTile.classList.remove('focus-settled');
@@ -828,6 +945,24 @@ function focusTile(tile){
 
 function clearFocus(){
   const previousTile = focusedTile;
+  if (isPortraitMobile()) {
+    previousTile?.classList.remove('focus-settled');
+    previousTile?.classList.add('unfocusing');
+    previousTile?.classList.remove('focused');
+    world.classList.remove('has-focus');
+    focusedTile = null;
+    setTimeout(() => {
+      stage.classList.remove('mobile-focus-mode');
+      previousTile?.classList.remove('unfocusing', 'focus-exiting');
+      previousTile?.style.removeProperty('--mobile-focus-x');
+      previousTile?.style.removeProperty('--mobile-focus-y');
+      previousTile?.style.removeProperty('--mobile-focus-scale');
+      previousTile?.style.removeProperty('--focus-ui-scale');
+    }, 600);
+    preFocusView = null;
+    return;
+  }
+
   previousTile?.classList.remove('focus-settled');
   previousTile?.classList.add('unfocusing');
   focusedTile?.classList.remove('focused');
@@ -910,39 +1045,41 @@ function animateCamera(change){
 }
 
 function beginFocus(tile){
-  if (window.innerWidth < 641) {
-    animateCamera(() => focusTile(tile));
-    return;
-  }
-
-  transitionLocked = true;
   tile.classList.add('focus-entering');
-
+  animateCamera(() => focusTile(tile));
   setTimeout(() => {
-    animateCamera(() => focusTile(tile));
-  }, 320);
+    if (focusedTile === tile) {
+      tile.classList.remove('focus-entering');
+      tile.classList.add('focus-settled');
+    }
+  }, 120);
 }
 
 function beginClearFocus(){
-  if (window.innerWidth < 641) {
-    animateCamera(clearFocus);
-    return;
-  }
-
   const exitingTile = focusedTile;
-  transitionLocked = true;
   exitingTile?.classList.add('focus-exiting');
-
-  setTimeout(() => {
-    if (focusedTile !== exitingTile) {
-      transitionLocked = false;
-      return;
-    }
-    animateCamera(clearFocus);
-  }, 320);
+  animateCamera(clearFocus);
 }
 
+stage.addEventListener('scroll', () => {
+  if (!isPortraitMobile() || focusedTile || nativeScrollFrame) return;
+  nativeScrollFrame = requestAnimationFrame(() => {
+    nativeScrollFrame = null;
+    recycleNativeRows();
+  });
+}, { passive: true });
+
+stage.addEventListener('click', (event) => {
+  if (!isPortraitMobile() || transitionLocked || categorySwitching) return;
+  const tile = event.target.closest('.tile');
+  if (focusedTile || tile) {
+    if (focusedTile) beginClearFocus();
+    else beginFocus(tile);
+  }
+});
+
 stage.addEventListener('pointerdown', (e) => {
+  if (isPortraitMobile()) return;
   if (transitionLocked) return;
   stopInertia();
   world.classList.remove('transitioning');
@@ -968,7 +1105,6 @@ stage.addEventListener('pointermove', (e) => {
   velocity.y = velocity.y * 0.65 + nextVelocityY * 0.35;
   lastPointer = { x: e.clientX, y: e.clientY, time: now };
   if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
-  if (isPortraitMobile() && moved) portraitWrapEnabled = true;
   pan.x = isPortraitMobile() ? panStart.x : panStart.x + dx;
   pan.y = panStart.y + dy;
   if (!dragFrame) {
