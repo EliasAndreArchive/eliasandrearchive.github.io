@@ -28,6 +28,20 @@
     { "file": "ireland/V1-0008_M16-1605.mp4", "category": "ireland", "label": "Ireland 08", "text": "", "size": "md" },
     { "file": "ireland/V1-0009_M16-1613.mp4", "category": "ireland", "label": "Ireland 09", "text": "", "size": "sm" },
     { "file": "ireland/V1-0010_M16-1616.mp4", "category": "ireland", "label": "Ireland 10", "text": "", "size": "lg" },
-    { "file": "ireland/V1-0011_M16-1618.mp4", "category": "ireland", "label": "Ireland 11", "text": "", "size": "md" }
+    { "file": "ireland/V1-0011_M16-1618.mp4", "category": "ireland", "label": "Ireland 11", "text": "", "size": "md" },
+    { "file": "fields/V1-0001_M16-2030.mp4", "category": "fields", "label": "Fields 01", "text": "", "size": "lg" },
+    { "file": "fields/V1-0002_M16-2031.mp4", "category": "fields", "label": "Fields 02", "text": "", "size": "md" },
+    { "file": "fields/V1-0003_M16-2033.mp4", "category": "fields", "label": "Fields 03", "text": "", "size": "md" },
+    { "file": "fields/V1-0004_M16-2046.mp4", "category": "fields", "label": "Fields 04", "text": "", "size": "sm" },
+    { "file": "fields/V1-0005_M16-2047.mp4", "category": "fields", "label": "Fields 05", "text": "", "size": "md" },
+    { "file": "fields/V1-0006_M16-2050.mp4", "category": "fields", "label": "Fields 06", "text": "", "size": "lg" },
+    { "file": "fields/V1-0007_M20-2037.mp4", "category": "fields", "label": "Fields 07", "text": "", "size": "md" },
+    { "file": "fields/V1-0008_M20-2038.mp4", "category": "fields", "label": "Fields 08", "text": "", "size": "sm" },
+    { "file": "fields/V1-0009_M20-2054.mp4", "category": "fields", "label": "Fields 09", "text": "", "size": "md" },
+    { "file": "fields/V1-0010_M20-2054.mp4", "category": "fields", "label": "Fields 10", "text": "", "size": "lg" },
+    { "file": "fields/V1-0011_M20-2054.mp4", "category": "fields", "label": "Fields 11", "text": "", "size": "md" },
+    { "file": "fields/V1-0012_M09-1949.mp4", "category": "fields", "label": "Fields 12", "text": "", "size": "sm" },
+    { "file": "fields/V1-0013_M16-2051.mp4", "category": "fields", "label": "Fields 13", "text": "", "size": "md" },
+    { "file": "fields/V1-0014_M16-2028.mp4", "category": "fields", "label": "Fields 14", "text": "", "size": "md" }
   ]
 }
