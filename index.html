@@ -197,6 +197,8 @@
     pointer-events: none;
     contain: layout style;
     backface-visibility: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
     transition:
       transform .55s cubic-bezier(0.22, 1, 0.36, 1),
       scale .72s cubic-bezier(0.16, 1, 0.3, 1),
@@ -334,6 +336,39 @@
     .tile.focus-entering .info{
       opacity: 0;
       transition: opacity .3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .tile:hover:not(.focused) .caption,
+    .tile:not(.focused) .caption{
+      opacity: 0;
+      transform: translateY(4px);
+    }
+
+    .tile:hover:not(.focused){
+      border-color: var(--line);
+    }
+
+    .tile:focus,
+    .tile:focus-visible{
+      outline: none;
+    }
+
+    .tile.focused .caption{
+      top: auto;
+      bottom: calc(100% + 10px * var(--focus-ui-scale, 1));
+      padding: 0;
+      background: transparent;
+      border-radius: 0;
+      color: var(--ink);
+      font-size: calc(16px * var(--focus-ui-scale, 1));
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: .035em;
+      text-shadow: none;
+      opacity: 1;
+      transform: none;
     }
   }
 
@@ -694,13 +729,14 @@ function getOverviewPan(overviewZoom){
 
 function getFocusZoom(tile){
   const isMobile = window.innerWidth < 600;
-  const focusedBounds = getFocusedBounds(tile);
-  const tileWidth = isMobile ? focusedBounds.width : tile.offsetWidth;
-  const tileHeight = isMobile ? focusedBounds.height : tile.offsetHeight;
+  const tileWidth = tile.offsetWidth;
+  const tileHeight = tile.offsetHeight;
   const horizontalGutter = isMobile ? FOCUS_GUTTER : 36;
   const verticalGutter = isMobile ? 96 : 56;
   const availableWidth = Math.max(1, window.innerWidth - horizontalGutter * 2);
-  const availableHeight = Math.max(1, window.innerHeight - verticalGutter * 2);
+  const captionReserve = isMobile ? 30 : 0;
+  const infoReserve = isMobile && tile.querySelector('.info') ? 64 : 0;
+  const availableHeight = Math.max(1, window.innerHeight - verticalGutter * 2 - captionReserve - infoReserve);
 
   const fitZoom = Math.min(
     isMobile ? DESKTOP_FOCUS_ZOOM : Infinity,
@@ -717,7 +753,11 @@ function getFocusedBounds(tile){
     : new DOMMatrix(getComputedStyle(tile).transform);
   const info = tile.querySelector('.info');
   const infoExtension = info ? info.offsetHeight + 9 : 0;
-  const totalHeight = tile.offsetHeight + infoExtension;
+  const caption = tile.querySelector('.caption');
+  const captionExtension = isPortraitMobile() && tile.classList.contains('focused') && caption
+    ? caption.offsetHeight + 10
+    : 0;
+  const totalHeight = tile.offsetHeight + infoExtension + captionExtension;
 
   return {
     width: Math.abs(tileTransform.a) * tile.offsetWidth +
@@ -725,7 +765,7 @@ function getFocusedBounds(tile){
     height: Math.abs(tileTransform.b) * tile.offsetWidth +
       Math.abs(tileTransform.d) * totalHeight,
     offsetX: tileTransform.c * infoExtension / 2,
-    offsetY: tileTransform.d * infoExtension / 2,
+    offsetY: tileTransform.d * (infoExtension - captionExtension) / 2,
   };
 }
 
