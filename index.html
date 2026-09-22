@@ -57,43 +57,48 @@
     white-space: nowrap;
   }
 
-  .category-picker{
+  .category-indicator{
     position: fixed;
     top: 22px;
     right: 28px;
     z-index: 30;
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 10px;
+    pointer-events: none;
   }
-  .category-picker label{
+  .category-indicator .current-category{
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--ink);
+  }
+  .category-indicator .category-count{
     font-size: 10px;
     font-weight: 600;
     letter-spacing: .1em;
     text-transform: uppercase;
     color: var(--ink-dim);
   }
-  .category-picker select{
-    appearance: none;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--bg);
-    color: var(--ink);
-    font: 600 11px/1 var(--font);
-    letter-spacing: .02em;
-    padding: 9px 30px 9px 13px;
-    cursor: pointer;
-    background-image: linear-gradient(45deg, transparent 50%, var(--ink-dim) 50%), linear-gradient(135deg, var(--ink-dim) 50%, transparent 50%);
-    background-position: calc(100% - 14px) 13px, calc(100% - 10px) 13px;
-    background-size: 4px 4px, 4px 4px;
-    background-repeat: no-repeat;
+  .mobile-collection-nav{
+    display: none;
   }
-  .category-picker select:focus-visible{
-    outline: 2px solid var(--blue);
-    outline-offset: 2px;
+  .mobile-view-toggle{
+    display: none;
   }
-
+  .mobile-instagram{
+    display: none;
+  }
   @media (max-width: 640px){
+    body::before{
+      content: '';
+      position: fixed;
+      inset: 0 0 auto;
+      height: 92px;
+      z-index: 15;
+      pointer-events: none;
+      background: linear-gradient(to bottom, rgba(251,250,246,.98) 0%, rgba(251,250,246,.86) 58%, rgba(251,250,246,0) 100%);
+    }
     .wordmark{
       top: 18px;
       left: 50%;
@@ -102,13 +107,86 @@
       width: calc(100% - 32px);
     }
     .wordmark .name{ max-width: none; font-size: 12px; white-space: nowrap; }
-    .category-picker{
+    .category-indicator{
       top: 52px;
       left: 50%;
       right: auto;
       transform: translateX(-50%);
     }
-    .category-picker label{ display:none; }
+    .hint{ display: none; }
+    .mobile-collection-nav{
+      position: fixed;
+      left: 50%;
+      bottom: max(20px, env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 172px;
+      padding: 12px 17px;
+      border: 1px solid rgba(28,27,23,.18);
+      border-radius: 999px;
+      background: rgba(251,250,246,.9);
+      box-shadow: 0 10px 28px rgba(28,27,23,.14);
+      color: var(--ink);
+      font: 600 10px/1 var(--font);
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      justify-content: center;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .mobile-collection-nav:active{
+      transform: translateX(-50%) scale(.97);
+    }
+    .mobile-collection-nav:disabled{
+      opacity: .55;
+      cursor: default;
+    }
+    .mobile-view-toggle{
+      position: fixed;
+      top: 45px;
+      left: 25%;
+      transform: translateX(-50%);
+      z-index: 40;
+      display: block;
+      padding: 8px 11px;
+      border: 1px solid rgba(28,27,23,.16);
+      border-radius: 999px;
+      background: rgba(251,250,246,.88);
+      box-shadow: 0 7px 20px rgba(28,27,23,.1);
+      color: var(--ink-dim);
+      font: 600 9px/1 var(--font);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      touch-action: manipulation;
+    }
+    .mobile-instagram{
+      position: fixed;
+      top: 45px;
+      left: 75%;
+      transform: translateX(-50%);
+      z-index: 40;
+      display: block;
+      padding: 8px 11px;
+      border: 1px solid rgba(28,27,23,.16);
+      border-radius: 999px;
+      background: rgba(251,250,246,.88);
+      box-shadow: 0 7px 20px rgba(28,27,23,.1);
+      color: var(--ink-dim);
+      font: 600 9px/1 var(--font);
+      letter-spacing: .08em;
+      text-decoration: none;
+      text-transform: uppercase;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      touch-action: manipulation;
+    }
   }
 
   /* ---------- stage / world ---------- */
@@ -140,6 +218,11 @@
   #world.has-focus .tile:not(.focused) {
     filter: blur(8px) grayscale(30%);
     opacity: 0.4;
+  }
+  #world.switching-out .tile{
+    opacity: 0 !important;
+    scale: .02;
+    pointer-events: none;
   }
 
   /* ---------- tiles ---------- */
@@ -194,10 +277,10 @@
 
   .tile .caption{
     position: absolute; left:0; right:0; bottom:0;
-    padding: 18px 10px 7px;
+    padding: 20px 12px 8px;
     background: linear-gradient(to top, rgba(8,8,8,0.82) 0%, rgba(8,8,8,0.42) 58%, rgba(8,8,8,0) 100%);
     border-radius: 0 0 5px 5px;
-    font-size: 9.5px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -214,6 +297,8 @@
   }
   .tile.focused .caption{
     border-radius: 0;
+    padding: calc(20px * var(--focus-ui-scale, 1)) calc(12px * var(--focus-ui-scale, 1)) calc(8px * var(--focus-ui-scale, 1));
+    font-size: calc(10px * var(--focus-ui-scale, 1));
   }
 
   .tile .info{
@@ -236,6 +321,17 @@
   .tile.focused .info{
     opacity: 1;
     transform: none;
+    top: calc(100% + 9px * var(--focus-ui-scale, 1));
+    padding: calc(9px * var(--focus-ui-scale, 1)) calc(11px * var(--focus-ui-scale, 1));
+    border-radius: calc(5px * var(--focus-ui-scale, 1));
+    font-size: calc(9.5px * var(--focus-ui-scale, 1));
+  }
+
+  @media (max-width: 640px){
+    .tile:hover:not(.focused) .caption{
+      opacity: 0;
+      transform: translateY(4px);
+    }
   }
 
   .tile .placeholder{
@@ -261,11 +357,14 @@
     <div class="dots"><span></span><span></span><span></span></div>
     <div class="name">Elias Andre Archive | © 2026 All rights reserved</div>
   </div>
-  <div class="category-picker">
-    <label for="category-select">Collection</label>
-    <select id="category-select" aria-label="Choose a collection"></select>
+  <div class="category-indicator" aria-live="polite">
+    <span class="current-category" id="current-category"></span>
+    <span class="category-count" id="category-count"></span>
   </div>
-  <div class="hint">Drag to pan · click a piece to focus</div>
+  <div class="hint" id="hint">Drag to pan · scroll to change collection</div>
+  <button class="mobile-view-toggle" id="mobile-view-toggle" type="button" aria-label="Switch mobile layout" aria-pressed="true">Stream</button>
+  <a class="mobile-instagram" href="https://www.instagram.com/illya.andr/" target="_blank" rel="noopener noreferrer">Instagram</a>
+  <button class="mobile-collection-nav" id="mobile-collection-nav" type="button"></button>
 
   <div id="stage">
     <div id="world"></div>
@@ -274,6 +373,7 @@
 <script>
 let MEDIA = [];
 let mediaBaseUrl = '';
+let mobileViewMode = 'stream';
 
 const SIZES = { sm: 130, md: 190, lg: 250 };
 const ROTATIONS = [-3.4, 1.8, -2.2, 3.7, -1.3, 2.8, -3.9, 1.1, 3.1, -2.7, 1.6, -3.2, 2.4, -1.8, 3.9, -2.5, 1.4];
@@ -291,6 +391,7 @@ const CENTER = 700;
 const GAP = 12; 
 let placedRects = [];
 let overviewCenter = { x: CENTER, y: CENTER };
+let overviewBounds = { left: CENTER, right: CENTER, top: CENTER, bottom: CENTER };
 
 function overlaps(a, b, pad){
   return a.left - pad < b.right && a.right + pad > b.left &&
@@ -336,25 +437,86 @@ function mediaUrl(item){
   return mediaBaseUrl.replace(/\/?$/, '/') + item.file.replace(/^\//, '');
 }
 
+function buildPortraitPlan(entries){
+  const remaining = [...entries];
+  const plan = new Map();
+  let top = 0;
+  let rowIndex = 0;
+  const rowShifts = [-5, 4, -2, 5, 1, -4];
+  const verticalJitter = [-3, 2, 0, 3, -2, 1];
+
+  while (remaining.length) {
+    const lead = remaining.shift();
+    const capacity = lead.item.size === 'lg' ? 1 : lead.item.size === 'sm' ? 3 : 2;
+    const row = [lead];
+
+    for (let cursor = 0; cursor < remaining.length && row.length < capacity;) {
+      if (remaining[cursor].item.size === lead.item.size) {
+        row.push(remaining.splice(cursor, 1)[0]);
+      } else {
+        cursor++;
+      }
+    }
+
+    const gap = lead.item.size === 'sm' ? 12 : 18;
+    const rowWidth = row.reduce((sum, entry) => sum + entry.w, 0) + gap * (row.length - 1);
+    const rowHeight = Math.max(...row.map(entry => entry.h));
+    let left = CENTER - rowWidth / 2 + rowShifts[rowIndex % rowShifts.length];
+
+    row.forEach((entry, itemIndex) => {
+      const x = left + entry.w / 2;
+      const y = top + rowHeight / 2 + verticalJitter[(rowIndex + itemIndex) % verticalJitter.length];
+      plan.set(entry.i, { x, y });
+      placedRects.push({
+        left,
+        top: y - entry.h / 2,
+        right: left + entry.w,
+        bottom: y + entry.h / 2,
+      });
+      left += entry.w + gap;
+    });
+
+    top += rowHeight + 22;
+    rowIndex++;
+  }
+
+  return plan;
+}
+
 function initLayout(items = MEDIA) {
   world.replaceChildren();
   placedRects = [];
   overviewCenter = { x: CENTER, y: CENTER };
   world.classList.remove('ready');
+  const portraitLayout = isPortraitMobile();
 
-  const placementOrder = items
-    .map((item, i) => ({ item, i, s: SIZES[item.size] || SIZES.md }))
-    .sort((a, b) => b.s - a.s);
-
-  placementOrder.forEach(({ item, i, s }) => {
+  const sourceOrder = items.map((item, i) => {
+    const s = SIZES[item.size] || SIZES.md;
     const ratio = (item.w && item.h) ? (item.w / item.h) : (4/3);
-    
-    const baseArea = s * s * 1.15; 
-    const w = Math.round(Math.sqrt(baseArea * ratio));
-    const h = Math.round(Math.sqrt(baseArea / ratio));
-    
-    const { x, y } = findSpot(w, h);
-    const rot = ROTATIONS[i % ROTATIONS.length];
+    if (portraitLayout) {
+      // At the .74 portrait zoom these resolve to roughly 360px-wide rows:
+      // one large, two medium, or three small tiles with equal outer margins.
+      const portraitWidths = { lg: 486, md: 235, sm: 152 };
+      const w = portraitWidths[item.size] || portraitWidths.md;
+      return { item, i, s, w, h: Math.round(w / ratio) };
+    }
+    const baseArea = s * s * 1.15;
+    return {
+      item,
+      i,
+      s,
+      w: Math.round(Math.sqrt(baseArea * ratio)),
+      h: Math.round(Math.sqrt(baseArea / ratio)),
+    };
+  });
+  const placementOrder = portraitLayout
+    ? sourceOrder
+    : sourceOrder.sort((a, b) => b.s - a.s);
+  const portraitPlan = portraitLayout ? buildPortraitPlan(placementOrder) : null;
+
+  placementOrder.forEach(({ item, i, w, h }) => {
+    const { x, y } = portraitLayout ? portraitPlan.get(i) : findSpot(w, h);
+    const rot = ROTATIONS[i % ROTATIONS.length] * (portraitLayout ? .58 : 1);
 
     const tile = document.createElement('div');
     tile.className = 'tile';
@@ -451,17 +613,26 @@ function initLayout(items = MEDIA) {
       x: (left + right) / 2,
       y: (top + bottom) / 2,
     };
+    overviewBounds = { left, right, top, bottom };
   }
   
   world.classList.add('ready');
 }
 
 const stage = document.getElementById('stage');
-const categorySelect = document.getElementById('category-select');
+const currentCategoryLabel = document.getElementById('current-category');
+const categoryCount = document.getElementById('category-count');
+const hint = document.getElementById('hint');
+const mobileCollectionNav = document.getElementById('mobile-collection-nav');
+const mobileViewToggle = document.getElementById('mobile-view-toggle');
 const DESKTOP_FOCUS_ZOOM = 2.4;
-const FOCUS_GUTTER = 24;
+
+function isPortraitMobile(){
+  return mobileViewMode === 'stream' && window.innerWidth <= 640 && window.innerHeight > window.innerWidth;
+}
 
 function getOverviewZoom(){
+  if (isPortraitMobile()) return .74;
   // Keep the original desktop composition, but give the world some breathing
   // room on narrow screens instead of rendering it at a desktop-sized scale.
   return Math.min(1, Math.max(0.62, window.innerWidth / 580));
@@ -469,23 +640,46 @@ function getOverviewZoom(){
 
 function getOverviewPan(overviewZoom){
   if (window.innerWidth >= 600) return { x: 0, y: 0 };
+  if (isPortraitMobile()) {
+    return {
+      x: CENTER - overviewCenter.x * overviewZoom,
+      y: getPortraitPanBounds(overviewZoom).max,
+    };
+  }
   return {
     x: CENTER - overviewCenter.x * overviewZoom,
     y: CENTER - overviewCenter.y * overviewZoom,
   };
 }
 
+function getPortraitPanBounds(activeZoom = zoom){
+  const topMargin = 86;
+  const bottomMargin = 78;
+  return {
+    max: topMargin - window.innerHeight / 2 + CENTER - overviewBounds.top * activeZoom,
+    min: window.innerHeight / 2 + CENTER - bottomMargin - overviewBounds.bottom * activeZoom,
+  };
+}
+
+function clampPortraitPanY(value){
+  if (!isPortraitMobile()) return value;
+  const bounds = getPortraitPanBounds();
+  return Math.min(bounds.max, Math.max(bounds.min, value));
+}
+
 function getFocusZoom(tile){
-  const { width: tileWidth, height: tileHeight } = getFocusedBounds(tile);
-  const horizontalGutter = window.innerWidth < 600 ? FOCUS_GUTTER : 56;
+  const tileWidth = tile.offsetWidth;
+  const tileHeight = tile.offsetHeight;
+  const horizontalGutter = window.innerWidth < 600 ? 8 : 56;
   const verticalGutter = window.innerWidth < 600 ? 96 : 72;
   const availableWidth = Math.max(1, window.innerWidth - horizontalGutter * 2);
   const availableHeight = Math.max(1, window.innerHeight - verticalGutter * 2);
+  const infoReserve = tile.querySelector('.info') ? (window.innerWidth < 600 ? 64 : 56) : 0;
 
   return Math.min(
     DESKTOP_FOCUS_ZOOM,
     availableWidth / tileWidth,
-    availableHeight / tileHeight
+    (availableHeight - infoReserve) / tileHeight
   );
 }
 
@@ -522,6 +716,7 @@ function focusTile(tile){
   world.classList.add('has-focus');
 
   zoom = getFocusZoom(tile);
+  tile.style.setProperty('--focus-ui-scale', String(1 / zoom));
   const cx = parseFloat(tile.dataset.cx);
   const cy = parseFloat(tile.dataset.cy);
   const bounds = getFocusedBounds(tile);
@@ -532,11 +727,18 @@ function focusTile(tile){
 function clearFocus(){
   const previousTile = focusedTile;
   focusedTile?.classList.remove('focused');
+  focusedTile?.style.removeProperty('--focus-ui-scale');
   world.classList.remove('has-focus');
   focusedTile = null;
   zoom = getOverviewZoom();
 
-  if (window.innerWidth < 600 && previousTile) {
+  if (isPortraitMobile() && previousTile) {
+    const cy = parseFloat(previousTile.dataset.cy);
+    pan = {
+      x: CENTER - overviewCenter.x * zoom,
+      y: clampPortraitPanY(CENTER - cy * zoom),
+    };
+  } else if (window.innerWidth < 600 && previousTile) {
     const cx = parseFloat(previousTile.dataset.cx);
     const cy = parseFloat(previousTile.dataset.cy);
     pan = { x: CENTER - cx * zoom, y: CENTER - cy * zoom };
@@ -548,6 +750,11 @@ function clearFocus(){
 let dragging = false, dragStart = null, panStart = null, moved = false, dragStartTarget = null;
 let lastPointer = null, velocity = { x: 0, y: 0 };
 let inertiaFrame = null, transitionLocked = false, transitionTimer = null;
+let categorySwitching = false;
+let categories = [];
+let activeCategoryIndex = 0;
+let wheelProgress = 0;
+let wheelResetTimer = null;
 
 function stopInertia(){
   if (inertiaFrame) cancelAnimationFrame(inertiaFrame);
@@ -565,8 +772,15 @@ function startInertia(){
     const decay = Math.pow(0.91, elapsed / 16.67);
     velocity.x *= decay;
     velocity.y *= decay;
-    pan.x += velocity.x * elapsed;
-    pan.y += velocity.y * elapsed;
+    if (isPortraitMobile()) {
+      velocity.x = 0;
+      const nextY = clampPortraitPanY(pan.y + velocity.y * elapsed);
+      if (nextY === pan.y) velocity.y = 0;
+      pan.y = nextY;
+    } else {
+      pan.x += velocity.x * elapsed;
+      pan.y += velocity.y * elapsed;
+    }
     updateTransform();
 
     if (Math.hypot(velocity.x, velocity.y) > 0.015) {
@@ -593,7 +807,7 @@ function animateCamera(change){
 }
 
 stage.addEventListener('pointerdown', (e) => {
-  if (transitionLocked) return;
+  if (transitionLocked || categorySwitching) return;
   stopInertia();
   world.classList.remove('transitioning');
   dragging = true; 
@@ -618,8 +832,8 @@ stage.addEventListener('pointermove', (e) => {
   velocity.y = velocity.y * 0.65 + nextVelocityY * 0.35;
   lastPointer = { x: e.clientX, y: e.clientY, time: now };
   if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
-  pan.x = panStart.x + dx;
-  pan.y = panStart.y + dy;
+  pan.x = isPortraitMobile() ? panStart.x : panStart.x + dx;
+  pan.y = isPortraitMobile() ? clampPortraitPanY(panStart.y + dy) : panStart.y + dy;
   updateTransform();
 });
 
@@ -675,6 +889,7 @@ function categoryLabel(value){
 function showCategory(category){
   stopInertia();
   focusedTile?.classList.remove('focused');
+  focusedTile?.style.removeProperty('--focus-ui-scale');
   focusedTile = null;
   world.classList.remove('has-focus', 'transitioning');
   transitionLocked = false;
@@ -686,7 +901,68 @@ function showCategory(category){
   zoom = getOverviewZoom();
   pan = getOverviewPan(zoom);
   updateTransform();
+
+  activeCategoryIndex = Math.max(0, categories.indexOf(category));
+  currentCategoryLabel.textContent = categoryLabel(category);
+  categoryCount.textContent = `${String(activeCategoryIndex + 1).padStart(2, '0')} / ${String(categories.length).padStart(2, '0')}`;
+  const previous = categories[activeCategoryIndex - 1];
+  const next = categories[activeCategoryIndex + 1];
+  hint.textContent = next
+    ? `Drag to pan · scroll down for ${categoryLabel(next)}`
+    : previous
+      ? `Drag to pan · scroll up for ${categoryLabel(previous)}`
+      : 'Drag to pan · click a piece to focus';
+
+  if (next) {
+    mobileCollectionNav.textContent = `Next · ${categoryLabel(next)} ↓`;
+    mobileCollectionNav.dataset.targetIndex = String(activeCategoryIndex + 1);
+  } else if (previous) {
+    mobileCollectionNav.textContent = `Previous · ${categoryLabel(previous)} ↑`;
+    mobileCollectionNav.dataset.targetIndex = String(activeCategoryIndex - 1);
+  } else {
+    mobileCollectionNav.textContent = 'Only collection';
+    mobileCollectionNav.dataset.targetIndex = '';
+  }
+  mobileCollectionNav.disabled = categories.length < 2;
+  mobileViewToggle.textContent = mobileViewMode === 'stream' ? 'Stream' : 'Canvas';
+  mobileViewToggle.setAttribute('aria-pressed', String(mobileViewMode === 'stream'));
 }
+
+async function changeCategory(nextIndex){
+  if (categorySwitching || nextIndex < 0 || nextIndex >= categories.length || nextIndex === activeCategoryIndex) return;
+  categorySwitching = true;
+  stopInertia();
+  world.classList.add('switching-out');
+
+  await new Promise(resolve => setTimeout(resolve, 520));
+
+  world.classList.remove('switching-out');
+  showCategory(categories[nextIndex]);
+  categorySwitching = false;
+}
+
+mobileCollectionNav.addEventListener('click', () => {
+  const targetIndex = Number(mobileCollectionNav.dataset.targetIndex);
+  if (mobileCollectionNav.dataset.targetIndex !== '') changeCategory(targetIndex);
+});
+
+[mobileCollectionNav, mobileViewToggle].forEach(control => {
+  control.addEventListener('pointerdown', event => event.stopPropagation());
+  control.addEventListener('pointerup', event => event.stopPropagation());
+});
+
+mobileViewToggle.addEventListener('click', async event => {
+  event.stopPropagation();
+  if (categorySwitching || window.innerWidth > 640) return;
+  categorySwitching = true;
+  stopInertia();
+  world.classList.add('switching-out');
+  await new Promise(resolve => setTimeout(resolve, 420));
+  mobileViewMode = mobileViewMode === 'stream' ? 'canvas' : 'stream';
+  world.classList.remove('switching-out');
+  showCategory(categories[activeCategoryIndex]);
+  categorySwitching = false;
+});
 
 async function loadArchive(){
   try {
@@ -707,30 +983,52 @@ async function loadArchive(){
       };
     });
 
-    const categories = [...new Set(MEDIA.map(item => item.category))];
-    categories.forEach(category => {
-      const option = document.createElement('option');
-      option.value = category;
-      option.textContent = categoryLabel(category);
-      categorySelect.appendChild(option);
-    });
+    categories = [...new Set(MEDIA.map(item => item.category))];
 
     if (categories.length) {
-      categorySelect.value = categories[0];
       showCategory(categories[0]);
     } else {
-      categorySelect.disabled = true;
+      currentCategoryLabel.textContent = 'Archive unavailable';
       world.classList.add('ready');
     }
   } catch (error) {
     console.error('Could not load the archive:', error);
-    categorySelect.disabled = true;
-    categorySelect.replaceChildren(new Option('Archive unavailable', ''));
+    currentCategoryLabel.textContent = 'Archive unavailable';
+    categoryCount.textContent = '';
     world.classList.add('ready');
   }
 }
 
-categorySelect.addEventListener('change', event => showCategory(event.target.value));
+stage.addEventListener('wheel', event => {
+  event.preventDefault();
+  if (isPortraitMobile()) {
+    if (categorySwitching || focusedTile) return;
+    stopInertia();
+    pan.y = clampPortraitPanY(pan.y - event.deltaY);
+    updateTransform();
+    return;
+  }
+  if (categorySwitching || focusedTile || Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
+
+  const direction = Math.sign(event.deltaY);
+  if ((direction < 0 && activeCategoryIndex === 0) ||
+      (direction > 0 && activeCategoryIndex === categories.length - 1)) {
+    wheelProgress = 0;
+    return;
+  }
+
+  if (wheelProgress && Math.sign(wheelProgress) !== direction) wheelProgress = 0;
+  wheelProgress += event.deltaY;
+  clearTimeout(wheelResetTimer);
+  wheelResetTimer = setTimeout(() => { wheelProgress = 0; }, 450);
+
+  if (Math.abs(wheelProgress) >= 220) {
+    const nextIndex = activeCategoryIndex + Math.sign(wheelProgress);
+    wheelProgress = 0;
+    changeCategory(nextIndex);
+  }
+}, { passive: false });
+
 loadArchive();
 </script>
 </body>
