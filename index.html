@@ -763,6 +763,7 @@ function focusTile(tile){
   focusedTile = tile;
   focusedTile.classList.remove('focus-settled');
   focusedTile.classList.add('focused');
+  world.classList.add('has-focus');
 
   zoom = getFocusZoom(tile);
   tile.style.setProperty('--focus-ui-scale', String(1 / zoom));
