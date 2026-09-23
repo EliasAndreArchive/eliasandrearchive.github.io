@@ -81,6 +81,11 @@
     background: var(--bg);
     box-shadow: 0 8px 24px -18px rgba(28,27,23,.55);
   }
+  .category-track{
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
   .category-nav button{
     appearance: none;
     border: 0;
@@ -114,22 +119,65 @@
     .wordmark .name{ max-width: none; font-size: 12px; white-space: nowrap; }
     .category-picker{
       top: auto;
-      bottom: 18px;
+      bottom: 30px;
       left: 50%;
       right: auto;
       transform: translateX(-50%);
     }
+    .category-picker::before{
+      content: "";
+      position: absolute;
+      inset: -24px -34px -18px;
+      z-index: -1;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,.2) 0%, rgba(0,0,0,.08) 42%, rgba(0,0,0,0) 74%);
+      filter: blur(8px);
+    }
     .category-picker .collection-label{ display:none; }
     .category-nav{
-      gap: 4px;
-      padding: 4px;
-      max-width: calc(100vw - 24px);
+      position: relative;
+      width: min(286px, calc(100vw - 64px));
+      display: block;
+      padding: 4px 0;
       overflow-x: auto;
+      overscroll-behavior-x: contain;
       scrollbar-width: none;
-      box-shadow: 0 10px 30px -16px rgba(28,27,23,.5);
+      box-shadow: 0 10px 26px -15px rgba(0,0,0,.62);
+      scroll-behavior: smooth;
+    }
+    .category-edge{
+      display: block;
+      position: absolute;
+      z-index: 2;
+      top: 1px;
+      width: 54px;
+      height: 46px;
+      pointer-events: none;
+    }
+    .category-edge.left{
+      left: 1px;
+      border-radius: 999px 0 0 999px;
+      background: linear-gradient(90deg, var(--bg) 12%, rgba(251,250,246,.96) 30%, rgba(251,250,246,.68) 62%, rgba(251,250,246,0) 100%);
+    }
+    .category-edge.right{
+      right: 1px;
+      border-radius: 0 999px 999px 0;
+      background: linear-gradient(270deg, var(--bg) 12%, rgba(251,250,246,.96) 30%, rgba(251,250,246,.68) 62%, rgba(251,250,246,0) 100%);
+    }
+    .category-track{
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: max-content;
+    }
+    .category-track::before,
+    .category-track::after{
+      content: "";
+      flex: 0 0 calc(min(143px, calc(50vw - 32px)) - 18px);
     }
     .category-nav::-webkit-scrollbar{ display:none; }
     .category-nav button{
+      flex: 0 0 auto;
       min-height: 40px;
       padding: 0 17px;
       font-size: 12px;
@@ -474,7 +522,11 @@
   </div>
   <div class="category-picker">
     <span class="collection-label">Collection</span>
-    <nav class="category-nav" id="category-nav" aria-label="Choose a collection"></nav>
+    <nav class="category-nav" id="category-nav" aria-label="Choose a collection">
+      <div class="category-track" id="category-track"></div>
+    </nav>
+    <span class="category-edge left" aria-hidden="true"></span>
+    <span class="category-edge right" aria-hidden="true"></span>
   </div>
   <div id="stage">
     <div id="world"></div>
@@ -779,6 +831,7 @@ function initLayout(items = MEDIA) {
 
 const stage = document.getElementById('stage');
 const categoryNav = document.getElementById('category-nav');
+const categoryTrack = document.getElementById('category-track');
 const FOCUS_GUTTER = 24;
 const videoVisibilityObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {
@@ -1309,6 +1362,14 @@ function updateCategoryNav(category, disabled = false){
     if (isCurrent) button.setAttribute('aria-current', 'page');
     button.disabled = disabled;
   });
+
+  const currentButton = categoryNav.querySelector(`button[data-category="${CSS.escape(category)}"]`);
+  if (currentButton && isPortraitMobile()) {
+    requestAnimationFrame(() => {
+      const targetLeft = currentButton.offsetLeft - (categoryNav.clientWidth - currentButton.offsetWidth) / 2;
+      categoryNav.scrollTo({ left: targetLeft, behavior: activeCategory ? 'smooth' : 'auto' });
+    });
+  }
 }
 
 async function showCategory(category, { animate = true, updateUrl = true, replaceUrl = false } = {}){
@@ -1372,7 +1433,7 @@ async function loadArchive(){
       button.dataset.category = category;
       button.textContent = categoryLabel(category);
       button.addEventListener('click', () => showCategory(category));
-      categoryNav.appendChild(button);
+      categoryTrack.appendChild(button);
     });
 
     if (categories.length) {
@@ -1386,7 +1447,7 @@ async function loadArchive(){
   } catch (error) {
     console.error('Could not load the archive:', error);
     categoryNav.setAttribute('aria-disabled', 'true');
-    categoryNav.textContent = 'Archive unavailable';
+    categoryTrack.textContent = 'Archive unavailable';
     world.classList.add('ready');
   }
 }
