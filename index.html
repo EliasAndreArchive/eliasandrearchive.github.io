@@ -832,6 +832,8 @@ function initLayout(items = MEDIA) {
 const stage = document.getElementById('stage');
 const categoryNav = document.getElementById('category-nav');
 const categoryTrack = document.getElementById('category-track');
+let categorySwipeStart = null;
+let suppressCategoryClick = false;
 const FOCUS_GUTTER = 24;
 const videoVisibilityObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {
@@ -1338,6 +1340,46 @@ function categoryLabel(value){
     .replace(/[-_]+/g, ' ')
     .replace(/\b\w/g, letter => letter.toUpperCase());
 }
+
+categoryNav.addEventListener('touchstart', event => {
+  if (!isPortraitMobile() || categorySwitching || event.touches.length !== 1) return;
+  const touch = event.touches[0];
+  categorySwipeStart = { x: touch.clientX, y: touch.clientY };
+}, { passive: true });
+
+categoryNav.addEventListener('touchend', event => {
+  if (!categorySwipeStart || !isPortraitMobile() || categorySwitching || !event.changedTouches.length) {
+    categorySwipeStart = null;
+    return;
+  }
+
+  const touch = event.changedTouches[0];
+  const deltaX = touch.clientX - categorySwipeStart.x;
+  const deltaY = touch.clientY - categorySwipeStart.y;
+  categorySwipeStart = null;
+
+  if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+
+  const currentIndex = categories.indexOf(activeCategory);
+  if (currentIndex < 0 || categories.length < 2) return;
+
+  suppressCategoryClick = true;
+  const direction = deltaX > 0 ? 1 : -1;
+  const nextIndex = (currentIndex + direction + categories.length) % categories.length;
+  showCategory(categories[nextIndex]);
+  setTimeout(() => { suppressCategoryClick = false; }, 400);
+}, { passive: true });
+
+categoryNav.addEventListener('touchcancel', () => {
+  categorySwipeStart = null;
+}, { passive: true });
+
+categoryNav.addEventListener('click', event => {
+  if (!suppressCategoryClick) return;
+  event.preventDefault();
+  event.stopPropagation();
+  suppressCategoryClick = false;
+}, true);
 
 function renderCategory(category){
   stopInertia();
