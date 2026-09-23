@@ -109,6 +109,17 @@
   }
 
   @media (max-width: 640px){
+    body::after{
+      content: "";
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 116px;
+      z-index: 15;
+      pointer-events: none;
+      background: linear-gradient(to top, var(--bg) 0%, rgba(251,250,246,.9) 42%, rgba(251,250,246,0) 100%);
+    }
     .wordmark{
       top: 18px;
       left: 50%;
@@ -1332,6 +1343,7 @@ window.addEventListener('resize', () => {
     pan = getOverviewPan(zoom);
   }
   updateTransform();
+  if (activeCategory) arrangeCategoryNav(activeCategory);
 });
 
 function categoryLabel(value){
@@ -1390,7 +1402,31 @@ function renderCategory(category){
   updateTransform();
 }
 
+function arrangeCategoryNav(category){
+  if (!categories.length) return;
+
+  const buttons = new Map(
+    [...categoryTrack.querySelectorAll('button')].map(button => [button.dataset.category, button])
+  );
+  let orderedCategories = categories;
+
+  if (isPortraitMobile()) {
+    const currentIndex = categories.indexOf(category);
+    const startOffset = -Math.floor((categories.length - 1) / 2);
+    orderedCategories = Array.from({ length: categories.length }, (_, index) => {
+      const wrappedIndex = (currentIndex + startOffset + index + categories.length) % categories.length;
+      return categories[wrappedIndex];
+    });
+  }
+
+  orderedCategories.forEach(name => {
+    const button = buttons.get(name);
+    if (button) categoryTrack.appendChild(button);
+  });
+}
+
 function updateCategoryNav(category, disabled = false){
+  arrangeCategoryNav(category);
   categoryNav.querySelectorAll('button').forEach(button => {
     const isCurrent = button.dataset.category === category;
     button.toggleAttribute('aria-current', isCurrent);
