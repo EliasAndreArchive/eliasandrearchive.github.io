@@ -6,11 +6,7 @@ Open Cloudflare Dashboard, then go to:
 
 `Storage & databases` → `R2 Object Storage` → `elias-andre-media` → `Objects`
 
-Open an existing folder or create one, then choose **Upload**. Recommended folders:
-
-- `cinematic/` for cinematic video files
-- `analog/` for analog video files
-- `photography/` for photographs
+Open the matching collection folder or create one, then choose **Upload**. Current folders include `ireland/`, `croatia/`, `fields/`, and `concerts/`.
 
 Use web-ready H.264 MP4 files for video and WebP or JPEG files for photos.
 
@@ -28,11 +24,11 @@ Edit `media.json` and add an object inside the `items` array:
 }
 ```
 
-The category selector is generated automatically from the category names used in this file. The first category in `media.json` is the collection shown when the page opens.
+The category selector is generated automatically from the category names used in this file. Home always remains the first collection and displays a balanced random selection of 15 videos from the other collections.
 
 Available sizes are `sm`, `md`, and `lg`. The site detects video or photo from the file extension. You can override that by adding `"type": "video"` or `"type": "photo"`.
 
-The `file` value is the object's complete path inside the R2 bucket. It does not need to match the category. For example, the current Home collection uses files stored in the `cinematic/` folder.
+The `file` value is the object's complete path inside the R2 bucket. It does not need to match the category, although keeping each collection in a matching folder makes the archive easier to manage.
 
 ## 3. Publish the metadata change
 
