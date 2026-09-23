@@ -1340,6 +1340,38 @@ function categoryLabel(value){
     .replace(/\b\w/g, letter => letter.toUpperCase());
 }
 
+function shuffled(items){
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index--) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
+  }
+  return result;
+}
+
+function getHomeSelection(limit = 15){
+  const sourceCategories = categories.filter(category => category !== 'home');
+  const pools = new Map(sourceCategories.map(category => [
+    category,
+    shuffled(MEDIA.filter(item => item.category === category)),
+  ]));
+  const selection = [];
+
+  while (selection.length < limit) {
+    let addedThisRound = false;
+    shuffled(sourceCategories).forEach(category => {
+      if (selection.length >= limit) return;
+      const item = pools.get(category)?.pop();
+      if (!item) return;
+      selection.push(item);
+      addedThisRound = true;
+    });
+    if (!addedThisRound) break;
+  }
+
+  return shuffled(selection);
+}
+
 function renderCategory(category){
   stopInertia();
   focusedTile?.classList.remove('focused');
@@ -1348,7 +1380,9 @@ function renderCategory(category){
   transitionLocked = false;
   clearTimeout(transitionTimer);
 
-  const items = MEDIA.filter(item => item.category === category);
+  const items = category === 'home'
+    ? getHomeSelection(15)
+    : MEDIA.filter(item => item.category === category);
 
   initLayout(items);
   zoom = getOverviewZoom();
