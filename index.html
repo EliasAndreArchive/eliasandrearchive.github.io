@@ -844,6 +844,9 @@ function initLayout(items = MEDIA) {
 const stage = document.getElementById('stage');
 const categoryNav = document.getElementById('category-nav');
 const categoryTrack = document.getElementById('category-track');
+let arrangedCategory = null;
+let categoryNavReorderTimer = null;
+let categoryNavScrollFrame = null;
 const FOCUS_GUTTER = 24;
 const videoVisibilityObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {
@@ -1425,8 +1428,45 @@ function arrangeCategoryNav(category){
   });
 }
 
+function centerCategoryButton(category, smooth = true){
+  const button = categoryNav.querySelector(`button[data-category="${CSS.escape(category)}"]`);
+  if (!button) return;
+
+  requestAnimationFrame(() => {
+    const targetLeft = button.offsetLeft - (categoryNav.clientWidth - button.offsetWidth) / 2;
+    cancelAnimationFrame(categoryNavScrollFrame);
+
+    if (!smooth) {
+      categoryNav.style.scrollBehavior = 'auto';
+      categoryNav.scrollLeft = targetLeft;
+      requestAnimationFrame(() => { categoryNav.style.scrollBehavior = ''; });
+      return;
+    }
+
+    const startLeft = categoryNav.scrollLeft;
+    const distance = targetLeft - startLeft;
+    const duration = 340;
+    const startTime = performance.now();
+    categoryNav.style.scrollBehavior = 'auto';
+
+    const move = now => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = progress < .5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      categoryNav.scrollLeft = startLeft + distance * eased;
+      if (progress < 1) {
+        categoryNavScrollFrame = requestAnimationFrame(move);
+      } else {
+        categoryNav.style.scrollBehavior = '';
+      }
+    };
+
+    categoryNavScrollFrame = requestAnimationFrame(move);
+  });
+}
+
 function updateCategoryNav(category, disabled = false){
-  arrangeCategoryNav(category);
   categoryNav.querySelectorAll('button').forEach(button => {
     const isCurrent = button.dataset.category === category;
     button.toggleAttribute('aria-current', isCurrent);
@@ -1434,13 +1474,32 @@ function updateCategoryNav(category, disabled = false){
     button.disabled = disabled;
   });
 
-  const currentButton = categoryNav.querySelector(`button[data-category="${CSS.escape(category)}"]`);
-  if (currentButton && isPortraitMobile()) {
-    requestAnimationFrame(() => {
-      const targetLeft = currentButton.offsetLeft - (categoryNav.clientWidth - currentButton.offsetWidth) / 2;
-      categoryNav.scrollTo({ left: targetLeft, behavior: activeCategory ? 'smooth' : 'auto' });
-    });
+  clearTimeout(categoryNavReorderTimer);
+
+  if (!isPortraitMobile()) {
+    arrangeCategoryNav(category);
+    arrangedCategory = category;
+    return;
   }
+
+  if (!arrangedCategory) {
+    arrangeCategoryNav(category);
+    arrangedCategory = category;
+    centerCategoryButton(category, false);
+    return;
+  }
+
+  if (arrangedCategory === category) {
+    centerCategoryButton(category, false);
+    return;
+  }
+
+  centerCategoryButton(category, true);
+  categoryNavReorderTimer = setTimeout(() => {
+    arrangeCategoryNav(category);
+    arrangedCategory = category;
+    centerCategoryButton(category, false);
+  }, 380);
 }
 
 async function showCategory(category, { animate = true, updateUrl = true, replaceUrl = false } = {}){
