@@ -1461,7 +1461,10 @@ async function loadArchive(){
       };
     });
 
-    categories = [...new Set(MEDIA.map(item => item.category))];
+    categories = [
+      'home',
+      ...new Set(MEDIA.map(item => item.category).filter(category => category !== 'home')),
+    ];
     categories.forEach(category => {
       const button = document.createElement('button');
       button.type = 'button';
