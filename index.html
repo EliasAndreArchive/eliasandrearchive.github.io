@@ -43,8 +43,9 @@
 
   /* ---------- chrome ---------- */
   .wordmark{
-    position: fixed; top: 26px; left: 28px;
+    position: fixed; top: 22px; left: 28px;
     display:flex; align-items:center; gap: 9px;
+    min-height: 35px;
     z-index: 20;
     pointer-events: none;
   }
@@ -146,11 +147,12 @@
       background: linear-gradient(to top, var(--bg) 0%, rgba(251,250,246,.9) 42%, rgba(251,250,246,0) 100%);
     }
     .wordmark{
-      top: 18px;
+      top: 12px;
       left: 16px;
       transform: none;
       width: auto;
       max-width: calc(100% - 112px);
+      min-height: 40px;
     }
     .wordmark .name{ max-width: none; font-size: 11px; white-space: nowrap; }
     .category-picker{
@@ -253,6 +255,7 @@
   }
   .contact-layout{
     width: min(1280px, 100%);
+    margin-inline: auto;
   }
   .contact-content{
     display: grid;
@@ -771,7 +774,7 @@
     <span class="category-edge left" aria-hidden="true"></span>
     <span class="category-edge right" aria-hidden="true"></span>
   </div>
-  <button class="contact-button" id="contact-button" type="button">Contact</button>
+  <button class="contact-button" id="contact-button" type="button">About</button>
   <div id="stage">
     <div id="world"></div>
   </div>
@@ -780,7 +783,7 @@
       <div class="contact-content">
         <p class="contact-kicker">About &amp; contact</p>
         <h1 class="contact-title">Elias Andre</h1>
-        <p class="contact-copy">I work within the limits of my own equipment to document the world as I see it. I use a mix of analog and digital media, shaped by an idyllic, documentary sensibility.</p>
+        <p class="contact-copy">I document the world as I see it through my lens, creating visual field notes from a mix of digital and analog gear. Through a documentary approach and deliberate color grading, I work within the limits of my equipment to capture real, authentic scenes in an artistic and meaningful way.</p>
         <p class="contact-note">I am a cinematographer based in NRW, Germany, available for commissions and collaborations involving creative film and video work.</p>
         <div class="contact-links" aria-label="Contact links">
           <a href="https://www.instagram.com/illya.andr/" target="_blank" rel="noopener noreferrer">Instagram</a>
