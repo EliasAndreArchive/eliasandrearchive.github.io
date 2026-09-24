@@ -961,6 +961,36 @@ function mediaUrl(item){
   return mediaBaseUrl.replace(/\/?$/, '/') + item.file.replace(/^\//, '');
 }
 
+function slugify(value){
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function parseLocationHash(){
+  const parts = location.hash.slice(1).split('/').filter(Boolean).map(part => {
+    try { return decodeURIComponent(part).toLowerCase(); }
+    catch { return part.toLowerCase(); }
+  });
+  return { category: parts[0] || '', clip: parts[1] || '' };
+}
+
+function setCategoryUrl(category, { replace = false } = {}){
+  const method = replace ? 'replaceState' : 'pushState';
+  history[method]({ category }, '', `#${encodeURIComponent(category)}`);
+}
+
+function setClipUrl(tile, { replace = false } = {}){
+  const category = tile.dataset.category;
+  const clip = tile.dataset.slug;
+  const method = replace ? 'replaceState' : 'pushState';
+  history[method]({ category, clip }, '', `#${encodeURIComponent(category)}/${encodeURIComponent(clip)}`);
+}
+
 function buildPortraitPlan(entries){
   const remaining = [...entries];
   const plan = new Map();
@@ -1057,6 +1087,7 @@ function initLayout(items = MEDIA, category = activeCategory) {
   const placementOrder = portraitLayout ? sourceOrder : sourceOrder.sort((a, b) => b.s - a.s);
   const portraitPlan = portraitLayout ? buildPortraitPlan(placementOrder) : null;
 
+  const labelCounts = new Map();
   placementOrder.forEach(({ item, i, w, h }, switchOrder) => {
     const placement = portraitLayout ? portraitPlan.get(i) : findSpot(w, h);
     const { x, y } = placement;
@@ -1075,6 +1106,10 @@ function initLayout(items = MEDIA, category = activeCategory) {
     tile.dataset.cx = x;
     tile.dataset.cy = y;
     tile.dataset.category = item.category;
+    const baseSlug = slugify(item.label);
+    const occurrence = (labelCounts.get(baseSlug) || 0) + 1;
+    labelCounts.set(baseSlug, occurrence);
+    tile.dataset.slug = occurrence === 1 ? baseSlug : `${baseSlug}-${occurrence}`;
     if (portraitLayout) {
       tile.dataset.portraitRow = placement.rowIndex;
       portraitRows[placement.rowIndex].tiles.push(tile);
@@ -1588,8 +1623,9 @@ function animateCamera(change, motionTile){
   }, duration);
 }
 
-function beginFocus(tile){
+function beginFocus(tile, { updateUrl = true } = {}){
   tile.classList.add('focus-entering');
+  if (updateUrl) setClipUrl(tile);
   animateCamera(() => focusTile(tile), tile);
   setTimeout(() => {
     if (focusedTile === tile) {
@@ -1602,6 +1638,7 @@ function beginFocus(tile){
 function beginClearFocus(){
   const exitingTile = focusedTile;
   exitingTile?.classList.add('focus-exiting');
+  if (activeCategory) setCategoryUrl(activeCategory, { replace: true });
   animateCamera(clearFocus, exitingTile);
 }
 
@@ -1968,13 +2005,21 @@ async function loadArchive(){
     });
 
     if (categories.length) {
-      const requestedCategory = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+      const { category: requestedCategory, clip: requestedClip } = parseLocationHash();
       if (requestedCategory === 'contact') {
         await showCategory(categories[0], { animate: false, updateUrl: false });
         await showContact({ animate: false, updateUrl: true, replaceUrl: true });
       } else {
         const initialCategory = categories.includes(requestedCategory) ? requestedCategory : categories[0];
         await showCategory(initialCategory, { animate: false, updateUrl: true, replaceUrl: true });
+        if (requestedClip) {
+          const tile = [...world.querySelectorAll('.tile')].find(candidate => candidate.dataset.slug === requestedClip);
+          if (tile) {
+            setClipUrl(tile, { replace: true });
+            beginFocus(tile, { updateUrl: false });
+          }
+          else setCategoryUrl(initialCategory, { replace: true });
+        }
       }
     } else {
       categoryNav.setAttribute('aria-disabled', 'true');
@@ -1990,12 +2035,20 @@ async function loadArchive(){
 
 contactButton.addEventListener('click', () => showContact());
 
-window.addEventListener('popstate', () => {
-  const category = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+window.addEventListener('popstate', async () => {
+  const { category, clip } = parseLocationHash();
   if (category === 'contact') {
     showContact({ updateUrl: false });
-  } else if (categories.includes(category) && (category !== activeCategory || contactActive)) {
-    showCategory(category, { updateUrl: false });
+  } else if (categories.includes(category)) {
+    if (category !== activeCategory || contactActive) {
+      await showCategory(category, { updateUrl: false });
+    }
+    if (clip) {
+      const tile = [...world.querySelectorAll('.tile')].find(candidate => candidate.dataset.slug === clip);
+      if (tile && !focusedTile) beginFocus(tile, { updateUrl: false });
+    } else if (focusedTile) {
+      beginClearFocus();
+    }
   }
 });
 
