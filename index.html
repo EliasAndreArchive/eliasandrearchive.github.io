@@ -620,6 +620,36 @@
     transition: opacity .15s ease;
   }
 
+  .collection-link{
+    display: block;
+    width: max-content;
+    margin-top: calc(9px * var(--focus-ui-scale, 1));
+    padding: calc(7px * var(--focus-ui-scale, 1)) calc(11px * var(--focus-ui-scale, 1));
+    border: 1px solid rgba(28,27,23,.22);
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    pointer-events: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tile.focused.focus-settled .collection-link{
+    pointer-events: auto;
+  }
+
+  .collection-link:hover{
+    background: #36342f;
+  }
+
+  .collection-link:focus-visible{
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
   @media (min-width: 641px) {
     .tile.focused .caption,
     .tile.unfocusing .caption{
@@ -939,7 +969,7 @@ function buildPortraitPlan(entries){
   return plan;
 }
 
-function initLayout(items = MEDIA) {
+function initLayout(items = MEDIA, category = activeCategory) {
   world.querySelectorAll('video').forEach(video => videoVisibilityObserver.unobserve(video));
   world.replaceChildren();
   placedRects = [];
@@ -989,6 +1019,7 @@ function initLayout(items = MEDIA) {
     
     tile.dataset.cx = x;
     tile.dataset.cy = y;
+    tile.dataset.category = item.category;
     if (portraitLayout) {
       tile.dataset.portraitRow = placement.rowIndex;
       portraitRows[placement.rowIndex].tiles.push(tile);
@@ -1061,6 +1092,18 @@ function initLayout(items = MEDIA) {
       info = document.createElement('div');
       info.className = 'info';
       info.textContent = item.text;
+      if (category === 'home') {
+        const collectionLink = document.createElement('button');
+        collectionLink.type = 'button';
+        collectionLink.className = 'collection-link';
+        collectionLink.textContent = `View ${categoryLabel(item.category)}`;
+        collectionLink.addEventListener('pointerdown', event => event.stopPropagation());
+        collectionLink.addEventListener('click', event => {
+          event.stopPropagation();
+          showCategory(item.category);
+        });
+        info.appendChild(collectionLink);
+      }
     }
 
     tile.appendChild(placeholder);
@@ -1243,8 +1286,9 @@ function focusTile(tile){
   if (isPortraitMobile()) {
     const rect = tile.getBoundingClientRect();
     const hasInfo = Boolean(tile.querySelector('.info'));
+    const hasCollectionLink = Boolean(tile.querySelector('.collection-link'));
     const labelReserve = 30;
-    const infoReserve = hasInfo ? 64 : 0;
+    const infoReserve = hasCollectionLink ? 104 : (hasInfo ? 64 : 0);
     const availableWidth = Math.max(1, window.innerWidth - FOCUS_GUTTER * 2);
     const availableHeight = Math.max(1, window.innerHeight - 192 - labelReserve - infoReserve);
     const focusScale = Math.min(
@@ -1658,7 +1702,7 @@ function renderCategory(category){
     ? getHomeSelection(15)
     : MEDIA.filter(item => item.category === category);
 
-  initLayout(items);
+  initLayout(items, category);
   zoom = getOverviewZoom();
   pan = getOverviewPan(zoom);
   updateTransform();
