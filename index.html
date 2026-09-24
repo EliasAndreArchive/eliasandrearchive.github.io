@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Archive — Elias Andre</title>
+<title>Visual Field Notes | Elias Andre</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -58,7 +58,7 @@
   .category-picker{
     position: fixed;
     top: 22px;
-    right: 28px;
+    right: 124px;
     z-index: 30;
     display: flex;
     align-items: center;
@@ -108,6 +108,10 @@
     outline-offset: 2px;
   }
   .contact-button{
+    position: fixed;
+    top: 22px;
+    right: 28px;
+    z-index: 30;
     appearance: none;
     border: 1px solid var(--line);
     border-radius: 999px;
@@ -143,12 +147,12 @@
     }
     .wordmark{
       top: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      justify-content: center;
-      width: calc(100% - 32px);
+      left: 16px;
+      transform: none;
+      width: auto;
+      max-width: calc(100% - 112px);
     }
-    .wordmark .name{ max-width: none; font-size: 12px; white-space: nowrap; }
+    .wordmark .name{ max-width: none; font-size: 11px; white-space: nowrap; }
     .category-picker{
       top: auto;
       bottom: 34px;
@@ -167,13 +171,11 @@
     }
     .category-picker .collection-label{ display:none; }
     .contact-button{
-      position: absolute;
-      left: 50%;
-      bottom: 58px;
+      top: 12px;
+      right: 16px;
       min-height: 40px;
       padding: 0 17px;
       font-size: 12px;
-      transform: translateX(-50%);
       white-space: nowrap;
     }
     .category-nav{
@@ -759,7 +761,7 @@
 
   <div class="wordmark">
     <div class="dots"><span></span><span></span><span></span></div>
-    <div class="name">Elias Andre Archive | © 2026 All rights reserved</div>
+    <div class="name">Visual Field Notes | Elias Andre</div>
   </div>
   <div class="category-picker">
     <span class="collection-label">Collection</span>
@@ -768,8 +770,8 @@
     </nav>
     <span class="category-edge left" aria-hidden="true"></span>
     <span class="category-edge right" aria-hidden="true"></span>
-    <button class="contact-button" id="contact-button" type="button">Contact</button>
   </div>
+  <button class="contact-button" id="contact-button" type="button">Contact</button>
   <div id="stage">
     <div id="world"></div>
   </div>
@@ -779,7 +781,7 @@
         <p class="contact-kicker">About &amp; contact</p>
         <h1 class="contact-title">Elias Andre</h1>
         <p class="contact-copy">I work within the limits of my own equipment to document the world as I see it. I use a mix of analog and digital media, shaped by an idyllic, documentary sensibility.</p>
-        <p class="contact-note">I am a cinematographer based in Germany, available for commissions and collaborations involving creative film and video work.</p>
+        <p class="contact-note">I am a cinematographer based in NRW, Germany, available for commissions and collaborations involving creative film and video work.</p>
         <div class="contact-links" aria-label="Contact links">
           <a href="https://www.instagram.com/illya.andr/" target="_blank" rel="noopener noreferrer">Instagram</a>
           <a href="mailto:illya.boldyryev@gmail.com">Email</a>
