@@ -107,6 +107,27 @@
     outline: 2px solid var(--blue);
     outline-offset: 2px;
   }
+  .contact-button{
+    appearance: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 600 11px/1 var(--font);
+    letter-spacing: .02em;
+    padding: 11px 14px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px -18px rgba(28,27,23,.55);
+    transition: color .24s ease, background-color .28s ease, transform .24s ease;
+  }
+  .contact-button[aria-current="page"]{
+    color: var(--bg);
+    background: var(--ink);
+  }
+  .contact-button:focus-visible{
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
 
   @media (max-width: 640px){
     body::after{
@@ -145,6 +166,16 @@
       filter: blur(8px);
     }
     .category-picker .collection-label{ display:none; }
+    .contact-button{
+      position: absolute;
+      left: 50%;
+      bottom: 58px;
+      min-height: 40px;
+      padding: 0 17px;
+      font-size: 12px;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
     .category-nav{
       position: relative;
       width: min(286px, calc(100vw - 64px));
@@ -194,6 +225,204 @@
       padding: 0 17px;
       font-size: 12px;
     }
+  }
+
+  /* ---------- contact ---------- */
+  .contact-page{
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    align-items: center;
+    padding: 112px clamp(30px, 11vw, 170px) 100px;
+    background: var(--bg);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(10px);
+    transition: opacity .42s ease, transform .5s cubic-bezier(.22,1,.36,1), visibility 0s linear .5s;
+  }
+  .contact-page.active{
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition-delay: 0s;
+  }
+  .contact-layout{
+    width: min(1280px, 100%);
+  }
+  .contact-content{
+    display: grid;
+    grid-template-columns: minmax(0, 680px) minmax(300px, 480px);
+    column-gap: clamp(48px, 7vw, 110px);
+    align-items: start;
+    width: 100%;
+  }
+  .contact-kicker,
+  .contact-title,
+  .contact-copy,
+  .contact-note,
+  .contact-links,
+  .contact-gear{
+    grid-column: 1;
+  }
+  .contact-kicker{
+    margin-bottom: 20px;
+    color: var(--ink-dim);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+  .contact-title{
+    font-size: clamp(42px, 7vw, 88px);
+    font-weight: 600;
+    line-height: .98;
+    letter-spacing: -.065em;
+  }
+  .contact-copy{
+    max-width: 640px;
+    margin-top: 34px;
+    font-size: clamp(17px, 2vw, 24px);
+    line-height: 1.48;
+    letter-spacing: -.025em;
+  }
+  .contact-note{
+    max-width: 530px;
+    margin-top: 16px;
+    color: var(--ink-dim);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .contact-links{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 34px;
+  }
+  .contact-links a{
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color .22s ease, background-color .22s ease, transform .22s ease;
+  }
+  .contact-links a:hover{
+    color: var(--bg);
+    background: var(--ink);
+    transform: translateY(-2px);
+  }
+  .contact-gear{
+    max-width: 620px;
+    margin-top: 42px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+  }
+  .contact-gear h2{
+    margin-bottom: 12px;
+    color: var(--ink-dim);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+  .contact-gear p{
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .contact-film{
+    position: relative;
+    grid-column: 2;
+    grid-row: 1 / span 6;
+    align-self: center;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    margin-top: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #e9e6dc;
+    box-shadow: 18px 22px 38px -20px rgba(28,27,23,.42);
+    transform: rotate(1.2deg);
+  }
+  .contact-film video{
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .contact-page .contact-kicker,
+  .contact-page .contact-title,
+  .contact-page .contact-copy,
+  .contact-page .contact-note,
+  .contact-page .contact-links,
+  .contact-page .contact-film,
+  .contact-page .contact-gear{
+    opacity: 0;
+    transform: translateY(12px) scale(.985);
+    transition:
+      opacity .5s ease,
+      transform .62s cubic-bezier(.22,1,.36,1);
+  }
+  .contact-page .contact-film{
+    transform: translateY(12px) scale(.985) rotate(1.2deg);
+  }
+  .contact-page.active .contact-kicker,
+  .contact-page.active .contact-title,
+  .contact-page.active .contact-copy,
+  .contact-page.active .contact-note,
+  .contact-page.active .contact-links,
+  .contact-page.active .contact-film,
+  .contact-page.active .contact-gear{
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .contact-page.active .contact-film{
+    transform: translateY(0) scale(1) rotate(1.2deg);
+  }
+  .contact-page.active .contact-kicker{ transition-delay: .04s; }
+  .contact-page.active .contact-title{ transition-delay: .09s; }
+  .contact-page.active .contact-copy{ transition-delay: .15s; }
+  .contact-page.active .contact-note{ transition-delay: .2s; }
+  .contact-page.active .contact-links{ transition-delay: .25s; }
+  .contact-page.active .contact-film{ transition-delay: .3s; }
+  .contact-page.active .contact-gear{ transition-delay: .36s; }
+  @media (max-width: 640px){
+    .contact-page{
+      align-items: start;
+      overflow-y: auto;
+      padding: 116px 26px 170px;
+    }
+    .contact-layout{
+      width: 100%;
+    }
+    .contact-content{ display: block; }
+    .contact-title{
+      font-size: clamp(42px, 14vw, 60px);
+    }
+    .contact-copy{
+      margin-top: 28px;
+      font-size: 18px;
+      line-height: 1.5;
+    }
+    .contact-note{ font-size: 12px; }
+    .contact-links{ margin-top: 28px; }
+    .contact-film{
+      width: 100%;
+      margin-top: 30px;
+    }
+    .contact-gear{
+      margin-top: 34px;
+      padding-top: 20px;
+    }
+    .contact-gear p{ font-size: 12px; }
   }
 
   /* ---------- stage / world ---------- */
@@ -539,10 +768,32 @@
     </nav>
     <span class="category-edge left" aria-hidden="true"></span>
     <span class="category-edge right" aria-hidden="true"></span>
+    <button class="contact-button" id="contact-button" type="button">Contact</button>
   </div>
   <div id="stage">
     <div id="world"></div>
   </div>
+  <main class="contact-page" id="contact-page" aria-hidden="true">
+    <div class="contact-layout">
+      <div class="contact-content">
+        <p class="contact-kicker">About &amp; contact</p>
+        <h1 class="contact-title">Elias Andre</h1>
+        <p class="contact-copy">I work within the limits of my own equipment to document the world as I see it. I use a mix of analog and digital media, shaped by an idyllic, documentary sensibility.</p>
+        <p class="contact-note">I am a cinematographer based in Germany, available for commissions and collaborations involving creative film and video work.</p>
+        <div class="contact-links" aria-label="Contact links">
+          <a href="https://www.instagram.com/illya.andr/" target="_blank" rel="noopener noreferrer">Instagram</a>
+          <a href="mailto:illya.boldyryev@gmail.com">Email</a>
+        </div>
+        <figure class="contact-film" aria-label="A short film from the archive">
+          <video autoplay muted loop playsinline preload="metadata" src="https://pub-26ba9fbb06f4490c97b63ffea3c40c67.r2.dev/contact/V1-0001_M11-2029.mp4"></video>
+        </figure>
+        <section class="contact-gear" aria-labelledby="contact-gear-title">
+          <h2 id="contact-gear-title">Process &amp; gear</h2>
+          <p>Almost all moving images in this archive were shot on a Canon 70D running Magic Lantern, allowing me to record 14-bit RAW video in an open-gate 3:2 format. I edit in DaVinci Resolve and color grade with the SpektraFilm add-on.</p>
+        </section>
+      </div>
+    </div>
+  </main>
 
 <script>
 let MEDIA = [];
@@ -550,6 +801,7 @@ let mediaBaseUrl = '';
 let categories = [];
 let activeCategory = null;
 let categorySwitching = false;
+let contactActive = false;
 
 const SIZES = { sm: 130, md: 190, lg: 250 };
 const ROTATIONS = [-3.4, 1.8, -2.2, 3.7, -1.3, 2.8, -3.9, 1.1, 3.1, -2.7, 1.6, -3.2, 2.4, -1.8, 3.9, -2.5, 1.4];
@@ -844,6 +1096,8 @@ function initLayout(items = MEDIA) {
 const stage = document.getElementById('stage');
 const categoryNav = document.getElementById('category-nav');
 const categoryTrack = document.getElementById('category-track');
+const contactButton = document.getElementById('contact-button');
+const contactPage = document.getElementById('contact-page');
 let arrangedCategory = null;
 let categoryNavReorderTimer = null;
 let categoryNavScrollFrame = null;
@@ -1468,13 +1722,14 @@ function centerCategoryButton(category, smooth = true){
 
 function updateCategoryNav(category, disabled = false){
   categoryNav.querySelectorAll('button').forEach(button => {
-    const isCurrent = button.dataset.category === category;
+    const isCurrent = Boolean(category) && button.dataset.category === category;
     button.toggleAttribute('aria-current', isCurrent);
     if (isCurrent) button.setAttribute('aria-current', 'page');
     button.disabled = disabled;
   });
 
   clearTimeout(categoryNavReorderTimer);
+  if (!category) return;
 
   if (!isPortraitMobile()) {
     arrangeCategoryNav(category);
@@ -1502,13 +1757,51 @@ function updateCategoryNav(category, disabled = false){
   }, 380);
 }
 
+async function showContact({ animate = true, updateUrl = true, replaceUrl = false } = {}){
+  if (categorySwitching || contactActive) return;
+
+  categorySwitching = true;
+  updateCategoryNav(null, true);
+  contactButton.setAttribute('aria-current', 'page');
+  contactButton.disabled = true;
+
+  if (animate && activeCategory) {
+    world.classList.add('collection-exiting');
+    const outgoingCount = world.querySelectorAll('.tile').length;
+    await new Promise(resolve => setTimeout(resolve, 360 + Math.min(180, outgoingCount * 10)));
+  }
+
+  world.querySelectorAll('video').forEach(video => video.pause());
+  contactActive = true;
+  contactPage.classList.add('active');
+  contactPage.setAttribute('aria-hidden', 'false');
+
+  if (updateUrl) {
+    const method = replaceUrl ? 'replaceState' : 'pushState';
+    history[method]({ page: 'contact' }, '', '#contact');
+  }
+
+  if (animate) await new Promise(resolve => setTimeout(resolve, 430));
+  categorySwitching = false;
+  contactButton.disabled = false;
+  updateCategoryNav(null, false);
+}
+
 async function showCategory(category, { animate = true, updateUrl = true, replaceUrl = false } = {}){
-  if (!categories.includes(category) || categorySwitching || category === activeCategory) return;
+  if (!categories.includes(category) || categorySwitching || (category === activeCategory && !contactActive)) return;
 
   categorySwitching = true;
   updateCategoryNav(activeCategory, true);
+  contactButton.disabled = true;
 
-  if (animate && activeCategory) {
+  if (contactActive) {
+    contactActive = false;
+    contactButton.removeAttribute('aria-current');
+    contactPage.classList.remove('active');
+    contactPage.setAttribute('aria-hidden', 'true');
+  }
+
+  if (animate && activeCategory && !world.classList.contains('collection-exiting')) {
     world.classList.add('collection-exiting');
     const outgoingCount = world.querySelectorAll('.tile').length;
     await new Promise(resolve => setTimeout(resolve, 440 + Math.min(240, outgoingCount * 12)));
@@ -1534,6 +1827,7 @@ async function showCategory(category, { animate = true, updateUrl = true, replac
     world.classList.remove('collection-entering');
   }
   categorySwitching = false;
+  contactButton.disabled = false;
   updateCategoryNav(category, false);
 }
 
@@ -1571,8 +1865,13 @@ async function loadArchive(){
 
     if (categories.length) {
       const requestedCategory = decodeURIComponent(location.hash.slice(1)).toLowerCase();
-      const initialCategory = categories.includes(requestedCategory) ? requestedCategory : categories[0];
-      await showCategory(initialCategory, { animate: false, updateUrl: true, replaceUrl: true });
+      if (requestedCategory === 'contact') {
+        await showCategory(categories[0], { animate: false, updateUrl: false });
+        await showContact({ animate: false, updateUrl: true, replaceUrl: true });
+      } else {
+        const initialCategory = categories.includes(requestedCategory) ? requestedCategory : categories[0];
+        await showCategory(initialCategory, { animate: false, updateUrl: true, replaceUrl: true });
+      }
     } else {
       categoryNav.setAttribute('aria-disabled', 'true');
       world.classList.add('ready');
@@ -1585,9 +1884,13 @@ async function loadArchive(){
   }
 }
 
+contactButton.addEventListener('click', () => showContact());
+
 window.addEventListener('popstate', () => {
   const category = decodeURIComponent(location.hash.slice(1)).toLowerCase();
-  if (categories.includes(category) && category !== activeCategory) {
+  if (category === 'contact') {
+    showContact({ updateUrl: false });
+  } else if (categories.includes(category) && (category !== activeCategory || contactActive)) {
     showCategory(category, { updateUrl: false });
   }
 });
