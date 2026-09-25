@@ -645,6 +645,13 @@
     scale: 1;
     pointer-events: auto;
   }
+  .tile.media-ready.source-switching{
+    opacity: 0 !important;
+    scale: .72;
+    filter: blur(2px);
+    pointer-events: none;
+    transition-duration: .55s, .24s, .15s, .3s, .45s, .45s, .24s, .24s;
+  }
   .tile:not(.media-ready){
     opacity: 0 !important;
   }
@@ -1049,6 +1056,7 @@ let previewsEnabled = (() => {
   try { return localStorage.getItem(PERFORMANCE_STORAGE_KEY) !== 'off'; }
   catch { return true; }
 })();
+let performanceSwitching = false;
 let categories = [];
 let activeCategory = null;
 let categorySwitching = false;
@@ -1139,16 +1147,34 @@ function previewMediaUrl(item){
 }
 
 function switchVideoSource(video, nextSrc){
-  if (!video || !nextSrc || video.currentSrc === nextSrc || video.src === nextSrc) return;
+  if (!video || !nextSrc || video.currentSrc === nextSrc || video.src === nextSrc) {
+    return Promise.resolve();
+  }
   const previousTime = video.currentTime || 0;
   const shouldPlay = !document.hidden && video.dataset.offscreen !== 'true';
-  video.addEventListener('loadedmetadata', () => {
-    if (video.duration && Number.isFinite(video.duration)) {
-      video.currentTime = previousTime % video.duration;
-    }
-    if (shouldPlay) video.play().catch(() => {});
-  }, { once: true });
-  video.src = nextSrc;
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(fallback);
+      video.removeEventListener(shouldPlay ? 'playing' : 'canplay', finish);
+      video.removeEventListener('error', finish);
+      resolve();
+    };
+    const fallback = setTimeout(finish, 5000);
+
+    video.addEventListener(shouldPlay ? 'playing' : 'canplay', finish, { once: true });
+    video.addEventListener('error', finish, { once: true });
+    video.addEventListener('loadedmetadata', () => {
+      if (video.duration && Number.isFinite(video.duration)) {
+        video.currentTime = previousTime % video.duration;
+      }
+      if (shouldPlay) video.play().catch(() => finish());
+    }, { once: true });
+    video.src = nextSrc;
+    video.load();
+  });
 }
 
 function updatePerformanceButton(){
@@ -1162,16 +1188,48 @@ function updatePerformanceButton(){
     : 'Performance previews off';
 }
 
-function setPerformanceMode(enabled, { persist = true } = {}){
+async function setPerformanceMode(enabled, { persist = true, animate = true } = {}){
+  if (performanceSwitching || enabled === previewsEnabled) return;
+  performanceSwitching = true;
   previewsEnabled = enabled;
   if (persist) {
     try { localStorage.setItem(PERFORMANCE_STORAGE_KEY, enabled ? 'on' : 'off'); }
     catch {}
   }
   updatePerformanceButton();
-  world.querySelectorAll('video:not(.focus-quality)').forEach(video => {
-    switchVideoSource(video, enabled ? video.dataset.previewSrc : video.dataset.fullSrc);
-  });
+  performanceButton.disabled = true;
+  performanceButton.setAttribute('aria-busy', 'true');
+
+  if (focusedTile) {
+    beginClearFocus();
+    await new Promise(resolve => setTimeout(resolve, 540));
+  }
+
+  const videos = [...world.querySelectorAll('video:not(.focus-quality)')];
+  const swaps = videos.map((video, index) => new Promise(resolve => {
+    const tile = video.closest('.tile');
+    const delay = animate ? index * 18 : 0;
+    setTimeout(async () => {
+      if (animate) {
+        tile?.classList.add('source-switching');
+        await new Promise(next => setTimeout(next, 210));
+      }
+      await switchVideoSource(video, enabled ? video.dataset.previewSrc : video.dataset.fullSrc);
+      if (animate) {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          tile?.classList.remove('source-switching');
+          resolve();
+        }));
+      } else {
+        resolve();
+      }
+    }, delay);
+  }));
+
+  await Promise.all(swaps);
+  performanceButton.disabled = false;
+  performanceButton.removeAttribute('aria-busy');
+  performanceSwitching = false;
 }
 
 function upgradeFocusedVideo(tile){
@@ -1622,6 +1680,24 @@ function getFocusZoom(tile){
   return isMobile ? fitZoom : fitZoom * 0.5;
 }
 
+function getCollectionReferenceFocusZoom(category){
+  const horizontalGutter = 36;
+  const verticalGutter = 56;
+  const availableWidth = Math.max(1, window.innerWidth - horizontalGutter * 2);
+  const availableHeight = Math.max(1, window.innerHeight - verticalGutter * 2);
+  const collection = MEDIA.filter(item => item.category === category);
+
+  return collection.reduce((referenceZoom, item) => {
+    const size = SIZES[item.size] || SIZES.md;
+    const ratio = item.w && item.h ? item.w / item.h : 4 / 3;
+    const baseArea = size * size * 1.15;
+    const width = Math.round(Math.sqrt(baseArea * ratio));
+    const height = Math.round(Math.sqrt(baseArea / ratio));
+    const itemZoom = Math.min(availableWidth / width, availableHeight / height) * .5;
+    return Math.min(referenceZoom, itemZoom);
+  }, Infinity);
+}
+
 function getFocusedBounds(tile){
   // Focused tiles finish at 0°, even while their CSS rotation is animating.
   const tileTransform = tile.classList.contains('focused')
@@ -1732,11 +1808,9 @@ function focusTile(tile){
   world.classList.add('has-focus');
 
   zoom = getFocusZoom(tile);
+  const collectionReferenceZoom = getCollectionReferenceFocusZoom(tile.dataset.category);
   const uiScale = window.innerWidth >= 641
-    ? Math.min(1, Array.from(world.querySelectorAll('.tile')).reduce(
-        (referenceZoom, candidate) => Math.min(referenceZoom, getFocusZoom(candidate)),
-        zoom
-      ) / zoom)
+    ? Math.min(1, (Number.isFinite(collectionReferenceZoom) ? collectionReferenceZoom : zoom) / zoom)
     : 1 / zoom;
   tile.style.setProperty('--focus-ui-scale', String(uiScale));
   const cx = parseFloat(tile.dataset.cx);
