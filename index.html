@@ -54,12 +54,22 @@
   .dots span:first-child{ margin-left:0; background: var(--red); }
   .dots span:nth-child(2){ background: var(--yellow); }
   .dots span:nth-child(3){ background: var(--blue); }
+  .wordmark-copy{ display:flex; flex-direction:column; gap:3px; }
   .wordmark .name{ font-size:15px; font-weight:600; letter-spacing:-0.01em; }
+  .wordmark-hint{
+    color: var(--ink-dim);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: .09em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .wordmark-hint-mobile{ display:none; }
 
   .category-picker{
     position: fixed;
     top: 22px;
-    right: 124px;
+    right: 210px;
     z-index: 30;
     display: flex;
     align-items: center;
@@ -108,11 +118,17 @@
     outline: 2px solid var(--blue);
     outline-offset: 2px;
   }
-  .contact-button{
+  .header-actions{
     position: fixed;
     top: 22px;
     right: 28px;
     z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .contact-button,
+  .performance-button{
     appearance: none;
     border: 1px solid var(--line);
     border-radius: 999px;
@@ -125,14 +141,17 @@
     box-shadow: 0 8px 24px -18px rgba(28,27,23,.55);
     transition: color .24s ease, background-color .28s ease, transform .24s ease;
   }
-  .contact-button[aria-current="page"]{
+  .contact-button[aria-current="page"],
+  .performance-button[aria-pressed="true"]{
     color: var(--bg);
     background: var(--ink);
   }
-  .contact-button:focus-visible{
+  .contact-button:focus-visible,
+  .performance-button:focus-visible{
     outline: 2px solid var(--blue);
     outline-offset: 2px;
   }
+  .performance-label-short{ display:none; }
 
   @media (max-width: 640px){
     body::after{
@@ -151,7 +170,7 @@
       left: 16px;
       transform: none;
       width: auto;
-      max-width: calc(100% - 112px);
+      max-width: calc(100% - 160px);
       min-height: 40px;
     }
     .wordmark .name{
@@ -159,6 +178,13 @@
       font-size: clamp(12px, 3.35vw, 13.5px);
       white-space: nowrap;
     }
+    .wordmark-copy{ gap:4px; }
+    .wordmark-hint{
+      font-size: 7px;
+      letter-spacing: .075em;
+    }
+    .wordmark-hint-desktop{ display:none; }
+    .wordmark-hint-mobile{ display:inline; }
     .category-picker{
       top: auto;
       bottom: 34px;
@@ -176,14 +202,20 @@
       filter: blur(8px);
     }
     .category-picker .collection-label{ display:none; }
-    .contact-button{
+    .header-actions{
       top: 12px;
       right: 16px;
+      gap: 6px;
+    }
+    .contact-button,
+    .performance-button{
       min-height: 40px;
-      padding: 0 17px;
+      padding: 0 14px;
       font-size: 12px;
       white-space: nowrap;
     }
+    .performance-label-full{ display:none; }
+    .performance-label-short{ display:inline; }
     .category-nav{
       position: relative;
       width: min(286px, calc(100vw - 64px));
@@ -273,7 +305,8 @@
   .contact-copy,
   .contact-note,
   .contact-links,
-  .contact-gear{
+  .contact-gear,
+  .contact-performance-note{
     width: min(600px, 48vw);
     margin-left: 8%;
     margin-right: auto;
@@ -346,6 +379,12 @@
     font-size: 13px;
     line-height: 1.65;
   }
+  .contact-performance-note{
+    margin-top: 20px;
+    color: var(--ink-dim);
+    font-size: 11px;
+    line-height: 1.55;
+  }
   .contact-film{
     position: absolute;
     width: clamp(170px, 20vw, 320px);
@@ -379,7 +418,8 @@
   .contact-page .contact-note,
   .contact-page .contact-links,
   .contact-page .contact-film,
-  .contact-page .contact-gear{
+  .contact-page .contact-gear,
+  .contact-page .contact-performance-note{
     opacity: 0;
     transform: translateY(12px) scale(.985);
     transition:
@@ -398,7 +438,8 @@
   .contact-page.active .contact-note,
   .contact-page.active .contact-links,
   .contact-page.active .contact-film,
-  .contact-page.active .contact-gear{
+  .contact-page.active .contact-gear,
+  .contact-page.active .contact-performance-note{
     opacity: 1;
     transform: translateY(0) scale(1);
   }
@@ -415,6 +456,7 @@
   .contact-page.active .contact-links{ transition-delay: .25s; }
   .contact-page.active .contact-film{ transition-delay: .3s; }
   .contact-page.active .contact-gear{ transition-delay: .36s; }
+  .contact-page.active .contact-performance-note{ transition-delay: .41s; }
   @media (min-width: 641px) and (max-height: 850px){
     .contact-page{
       padding-top: 84px;
@@ -455,7 +497,8 @@
     .contact-copy,
     .contact-note,
     .contact-links,
-    .contact-gear{
+    .contact-gear,
+    .contact-performance-note{
       width: 100%;
       margin-inline: 0;
     }
@@ -480,6 +523,10 @@
       padding-top: 20px;
     }
     .contact-gear p{ font-size: 12px; }
+    .contact-performance-note{
+      margin-top: 22px;
+      font-size: 11px;
+    }
   }
 
   /* ---------- stage / world ---------- */
@@ -489,6 +536,30 @@
     overflow: hidden;
     touch-action: none;
     overscroll-behavior: none;
+  }
+  .collection-loading{
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 4;
+    max-width: min(320px, calc(100vw - 56px));
+    padding: 13px 17px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink-dim);
+    background: rgba(248,247,242,.94);
+    box-shadow: 0 12px 30px rgba(28,27,23,.08);
+    font-size: 11px;
+    line-height: 1.35;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -44%) scale(.97);
+    transition: opacity .28s ease, transform .35s cubic-bezier(.22,1,.36,1);
+  }
+  .collection-loading.visible{
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
   #stage.grabbing{ cursor: grabbing; }
   #world{
@@ -606,6 +677,34 @@
     backface-visibility: hidden;
     transform: translateZ(0);
     transition: border-radius .45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .tile video.focus-quality{
+    z-index: 1;
+    opacity: 0;
+    transition: opacity .2s ease, border-radius .45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .tile video.focus-quality.ready{ opacity: 1; }
+  .quality-loading{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 6;
+    padding: 8px 11px;
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(18,18,16,.78);
+    font-size: calc(10px * var(--focus-ui-scale, 1));
+    font-weight: 600;
+    letter-spacing: .02em;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -45%);
+    transition: opacity .2s ease, transform .25s ease;
+  }
+  .quality-loading.visible{
+    opacity: 1;
+    transform: translate(-50%, -50%);
   }
 
   .tile .caption{
@@ -846,7 +945,10 @@
 
   <div class="wordmark">
     <div class="dots"><span></span><span></span><span></span></div>
-    <div class="name">Visual Field Notes | Elias Andre</div>
+    <div class="wordmark-copy">
+      <div class="name">Visual Field Notes | Elias Andre</div>
+      <div class="wordmark-hint"><span class="wordmark-hint-desktop">Scroll to a clip and click to focus</span><span class="wordmark-hint-mobile">Scroll to a clip and tap to focus</span></div>
+    </div>
   </div>
   <div class="category-picker">
     <span class="collection-label">Collection</span>
@@ -856,10 +958,16 @@
     <span class="category-edge left" aria-hidden="true"></span>
     <span class="category-edge right" aria-hidden="true"></span>
   </div>
-  <button class="contact-button" id="contact-button" type="button">About</button>
+  <div class="header-actions">
+    <button class="performance-button" id="performance-button" type="button" aria-pressed="true" aria-label="Disable performance previews">
+      <span class="performance-label-full">Performance</span><span class="performance-label-short">Fast</span>
+    </button>
+    <button class="contact-button" id="contact-button" type="button">About</button>
+  </div>
   <div id="stage">
     <div id="world"></div>
   </div>
+  <div class="collection-loading" id="collection-loading" role="status" aria-live="polite">Loading. Enable Fast mode if loading takes too long.</div>
   <main class="contact-page" id="contact-page" aria-hidden="true">
     <div class="contact-layout">
       <div class="contact-content">
@@ -881,6 +989,7 @@
         <figure class="contact-film contact-film-secondary" aria-label="A second short film from the archive">
           <video autoplay muted loop playsinline preload="metadata" src="https://pub-26ba9fbb06f4490c97b63ffea3c40c67.r2.dev/contact/V1-0001_2026-09-24%2020-43-04.mp4"></video>
         </figure>
+        <p class="contact-performance-note">On a lower-end device, use Performance mode for smoother playback.</p>
       </div>
     </div>
   </main>
@@ -888,6 +997,12 @@
 <script>
 let MEDIA = [];
 let mediaBaseUrl = '';
+let previewBaseUrl = '';
+const PERFORMANCE_STORAGE_KEY = 'visual-field-notes-performance-previews';
+let previewsEnabled = (() => {
+  try { return localStorage.getItem(PERFORMANCE_STORAGE_KEY) !== 'off'; }
+  catch { return true; }
+})();
 let categories = [];
 let activeCategory = null;
 let categorySwitching = false;
@@ -953,12 +1068,121 @@ function revealTile(tile, placeholder, keepPlaceholder = false) {
   // before transitioning the tile to its normal size.
   requestAnimationFrame(() => requestAnimationFrame(() => {
     tile.classList.add('media-ready');
+    updateCollectionLoading();
   }));
+}
+
+function updateCollectionLoading(){
+  if (!collectionLoading) return;
+  const total = world.querySelectorAll('.tile').length;
+  const ready = world.querySelectorAll('.tile.media-ready').length;
+  const enoughReady = total === 0 || ready >= Math.min(3, total);
+  collectionLoading.classList.toggle('visible', !enoughReady);
 }
 
 function mediaUrl(item){
   if (/^https?:\/\//i.test(item.file)) return item.file;
   return mediaBaseUrl.replace(/\/?$/, '/') + item.file.replace(/^\//, '');
+}
+
+function previewMediaUrl(item){
+  if (!item.previewFile) return mediaUrl(item);
+  if (/^(?:https?:)?\/\//i.test(item.previewFile)) return item.previewFile;
+  if (!previewBaseUrl) return item.previewFile.replace(/^\//, '');
+  return previewBaseUrl.replace(/\/?$/, '/') + item.previewFile.replace(/^\//, '');
+}
+
+function switchVideoSource(video, nextSrc){
+  if (!video || !nextSrc || video.currentSrc === nextSrc || video.src === nextSrc) return;
+  const previousTime = video.currentTime || 0;
+  const shouldPlay = !document.hidden && video.dataset.offscreen !== 'true';
+  video.addEventListener('loadedmetadata', () => {
+    if (video.duration && Number.isFinite(video.duration)) {
+      video.currentTime = previousTime % video.duration;
+    }
+    if (shouldPlay) video.play().catch(() => {});
+  }, { once: true });
+  video.src = nextSrc;
+}
+
+function updatePerformanceButton(){
+  performanceButton.setAttribute('aria-pressed', String(previewsEnabled));
+  performanceButton.setAttribute(
+    'aria-label',
+    previewsEnabled ? 'Disable performance previews' : 'Enable performance previews'
+  );
+  performanceButton.title = previewsEnabled
+    ? 'Performance previews on'
+    : 'Performance previews off';
+}
+
+function setPerformanceMode(enabled, { persist = true } = {}){
+  previewsEnabled = enabled;
+  if (persist) {
+    try { localStorage.setItem(PERFORMANCE_STORAGE_KEY, enabled ? 'on' : 'off'); }
+    catch {}
+  }
+  updatePerformanceButton();
+  world.querySelectorAll('video:not(.focus-quality)').forEach(video => {
+    switchVideoSource(video, enabled ? video.dataset.previewSrc : video.dataset.fullSrc);
+  });
+}
+
+function upgradeFocusedVideo(tile){
+  const preview = tile.querySelector('video:not(.focus-quality)');
+  const fullUrl = preview?.dataset.fullSrc;
+  if (!preview || !fullUrl || preview.currentSrc === fullUrl || tile.querySelector('.focus-quality')) return;
+
+  const quality = document.createElement('video');
+  quality.className = 'focus-quality';
+  quality.muted = true;
+  quality.defaultMuted = true;
+  quality.autoplay = true;
+  quality.loop = true;
+  quality.playsInline = true;
+  quality.preload = 'auto';
+  quality.disablePictureInPicture = true;
+  quality.setAttribute('muted', '');
+  quality.setAttribute('autoplay', '');
+  quality.setAttribute('loop', '');
+  quality.setAttribute('playsinline', '');
+  quality.setAttribute('webkit-playsinline', '');
+  quality.setAttribute('disableRemotePlayback', '');
+  quality.src = fullUrl;
+  const qualityLoading = document.createElement('div');
+  qualityLoading.className = 'quality-loading visible';
+  qualityLoading.textContent = 'Loading high quality…';
+  tile.insertBefore(quality, preview.nextSibling);
+  tile.appendChild(qualityLoading);
+
+  quality.addEventListener('canplay', () => {
+    if (!quality.duration || !Number.isFinite(quality.duration)) return;
+    quality.currentTime = preview.currentTime % quality.duration;
+    quality.play().catch(() => {});
+    requestAnimationFrame(() => {
+      quality.classList.add('ready');
+      qualityLoading.classList.remove('visible');
+      setTimeout(() => qualityLoading.remove(), 240);
+    });
+  }, { once: true });
+
+  quality.addEventListener('error', () => {
+    qualityLoading.remove();
+    quality.remove();
+  }, { once: true });
+}
+
+function downgradeFocusedVideo(tile){
+  const preview = tile?.querySelector('video:not(.focus-quality)');
+  const quality = tile?.querySelector('video.focus-quality');
+  tile?.querySelector('.quality-loading')?.remove();
+  if (!preview || !quality) return;
+  if (preview.duration && Number.isFinite(preview.duration)) {
+    preview.currentTime = quality.currentTime % preview.duration;
+  }
+  preview.play().catch(() => {});
+  quality.classList.remove('ready');
+  setTimeout(() => quality.remove(), 220);
 }
 
 function slugify(value){
@@ -1060,6 +1284,7 @@ function initLayout(items = MEDIA, category = activeCategory) {
   placedRects = [];
   overviewCenter = { x: CENTER, y: CENTER };
   world.classList.remove('ready');
+  collectionLoading.classList.add('visible');
   const portraitLayout = isPortraitMobile();
 
   const mobileWidth = Math.max(280, window.innerWidth - 40);
@@ -1159,7 +1384,9 @@ function initLayout(items = MEDIA, category = activeCategory) {
         mediaEl.classList.add('missing');
         revealTile(tile, placeholder, true);
       }, { once: true });
-      mediaEl.src = mediaUrl(item);
+      mediaEl.dataset.fullSrc = mediaUrl(item);
+      mediaEl.dataset.previewSrc = previewMediaUrl(item);
+      mediaEl.src = previewsEnabled ? mediaEl.dataset.previewSrc : mediaEl.dataset.fullSrc;
     } else {
       mediaEl = document.createElement('img');
       mediaEl.loading = 'lazy';
@@ -1235,7 +1462,9 @@ const stage = document.getElementById('stage');
 const categoryNav = document.getElementById('category-nav');
 const categoryTrack = document.getElementById('category-track');
 const contactButton = document.getElementById('contact-button');
+const performanceButton = document.getElementById('performance-button');
 const contactPage = document.getElementById('contact-page');
+const collectionLoading = document.getElementById('collection-loading');
 let arrangedCategory = null;
 let categoryNavReorderTimer = null;
 let categoryNavScrollFrame = null;
@@ -1625,6 +1854,7 @@ function animateCamera(change, motionTile){
 
 function beginFocus(tile, { updateUrl = true } = {}){
   tile.classList.add('focus-entering');
+  upgradeFocusedVideo(tile);
   if (updateUrl) setClipUrl(tile);
   animateCamera(() => focusTile(tile), tile);
   setTimeout(() => {
@@ -1638,6 +1868,7 @@ function beginFocus(tile, { updateUrl = true } = {}){
 function beginClearFocus(){
   const exitingTile = focusedTile;
   exitingTile?.classList.add('focus-exiting');
+  downgradeFocusedVideo(exitingTile);
   if (activeCategory) setCategoryUrl(activeCategory, { replace: true });
   animateCamera(clearFocus, exitingTile);
 }
@@ -1913,6 +2144,7 @@ async function showContact({ animate = true, updateUrl = true, replaceUrl = fals
   }
 
   world.querySelectorAll('video').forEach(video => video.pause());
+  collectionLoading.classList.remove('visible');
   contactActive = true;
   contactPage.classList.add('active');
   contactPage.setAttribute('aria-hidden', 'false');
@@ -1979,6 +2211,7 @@ async function loadArchive(){
 
     const archive = await response.json();
     mediaBaseUrl = archive.mediaBaseUrl || '';
+    previewBaseUrl = archive.previewBaseUrl ?? mediaBaseUrl;
     MEDIA = (archive.items || []).map(item => {
       const extension = item.file.split('?')[0].split('.').pop().toLowerCase();
       return {
@@ -2034,6 +2267,8 @@ async function loadArchive(){
 }
 
 contactButton.addEventListener('click', () => showContact());
+performanceButton.addEventListener('click', () => setPerformanceMode(!previewsEnabled));
+updatePerformanceButton();
 
 window.addEventListener('popstate', async () => {
   const { category, clip } = parseLocationHash();
