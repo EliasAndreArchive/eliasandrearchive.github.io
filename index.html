@@ -164,6 +164,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    max-width: calc(100vw - 28px);
     padding: 10px 12px 10px 15px;
     border-radius: 999px;
     color: var(--bg);
@@ -736,30 +737,6 @@
     transition: opacity .2s ease, border-radius .45s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .tile video.focus-quality.ready{ opacity: 1; }
-  .quality-progress{
-    position:absolute;
-    left:0;
-    right:0;
-    bottom:0;
-    z-index:7;
-    height:calc(3px * var(--focus-ui-scale, 1));
-    overflow:hidden;
-    background:rgba(255,255,255,.34);
-    opacity:0;
-    pointer-events:none;
-    transition:opacity .2s ease;
-  }
-  .quality-progress::after{
-    content:'';
-    display:block;
-    width:100%;
-    height:100%;
-    background:var(--ink);
-    transform:scaleX(var(--quality-progress, 0));
-    transform-origin:left center;
-    transition:transform .18s linear;
-  }
-  .tile.quality-loading-active .quality-progress{ opacity:1; }
   .tile .caption{
     position: absolute; left:0; right:0; bottom:0;
     padding: 18px 10px 7px;
@@ -778,26 +755,43 @@
     z-index: 2;
   }
   .quality-status{
-    display:none;
-    flex:0 0 auto;
+    display:flex;
     align-items:center;
-    min-height:1.8em;
-    padding:.22em .58em;
+    width:max-content;
+    max-height:0;
+    margin-top:0;
+    padding:0 calc(9px * var(--focus-ui-scale, 1));
+    overflow:hidden;
     border-radius:999px;
     color:#fff;
     background:var(--ink);
-    font-size:.63em;
+    font-size:.78em;
     font-weight:700;
-    line-height:1;
+    line-height:1.8;
     letter-spacing:.08em;
+    text-transform:uppercase;
     white-space:nowrap;
+    opacity:0;
+    visibility:hidden;
+    transform:translateY(-3px);
+    transition:
+      opacity .3s ease,
+      transform .38s cubic-bezier(.22,1,.36,1),
+      max-height .38s cubic-bezier(.22,1,.36,1),
+      margin-top .38s cubic-bezier(.22,1,.36,1),
+      padding .38s cubic-bezier(.22,1,.36,1),
+      visibility 0s linear .38s;
+    pointer-events:none;
   }
-  .tile.quality-loading-active .caption{
-    display:flex;
-    align-items:center;
-    gap:.65em;
+  .tile.focused.quality-loading-active .quality-status{
+    max-height:calc(24px * var(--focus-ui-scale, 1));
+    margin-top:calc(7px * var(--focus-ui-scale, 1));
+    padding:calc(2px * var(--focus-ui-scale, 1)) calc(9px * var(--focus-ui-scale, 1));
+    opacity:1;
+    visibility:visible;
+    transform:none;
+    transition-delay:0s;
   }
-  .tile.quality-loading-active .quality-status{ display:inline-flex; }
   .tile:hover .caption, .tile.focused .caption { 
     opacity: 1; transform: none; 
   }
@@ -1036,8 +1030,8 @@
 </head>
 <body>
 
-  <div class="ios-browser-warning" id="ios-browser-warning" role="status" aria-live="polite">
-    <span>Use with native browser</span>
+  <div class="ios-browser-warning" id="ios-browser-warning" role="status" aria-live="polite" hidden>
+    <span>Use your native browser (Safari) for the best performance.</span>
     <button type="button" aria-label="Dismiss browser warning">&times;</button>
   </div>
 
@@ -1298,22 +1292,8 @@ function upgradeFocusedVideo(tile){
   quality.setAttribute('webkit-playsinline', '');
   quality.setAttribute('disableRemotePlayback', '');
   quality.src = fullUrl;
-  const qualityProgress = document.createElement('div');
-  qualityProgress.className = 'quality-progress';
-  qualityProgress.setAttribute('aria-hidden', 'true');
   tile.insertBefore(quality, preview.nextSibling);
-  tile.appendChild(qualityProgress);
   tile.classList.add('quality-loading-active');
-
-  const updateQualityProgress = () => {
-    if (!quality.duration || !Number.isFinite(quality.duration)) return;
-    let bufferedEnd = 0;
-    for (let i = 0; i < quality.buffered.length; i++) {
-      bufferedEnd = Math.max(bufferedEnd, quality.buffered.end(i));
-    }
-    const progress = Math.min(1, Math.max(0, bufferedEnd / quality.duration));
-    tile.style.setProperty('--quality-progress', String(progress));
-  };
 
   let handoffComplete = false;
   const timeDrift = () => {
@@ -1336,10 +1316,6 @@ function upgradeFocusedVideo(tile){
       }
       quality.classList.add('ready');
       tile.classList.remove('quality-loading-active');
-      setTimeout(() => {
-        qualityProgress.remove();
-        tile.style.removeProperty('--quality-progress');
-      }, 240);
     });
   };
   const syncAndPlay = () => {
@@ -1352,14 +1328,9 @@ function upgradeFocusedVideo(tile){
   quality.addEventListener('seeked', revealIfPlayingAndSynced);
   quality.addEventListener('playing', revealIfPlayingAndSynced);
   quality.addEventListener('timeupdate', revealIfPlayingAndSynced);
-  quality.addEventListener('progress', updateQualityProgress);
-  quality.addEventListener('loadedmetadata', updateQualityProgress);
-  quality.addEventListener('durationchange', updateQualityProgress);
 
   quality.addEventListener('error', () => {
     tile.classList.remove('quality-loading-active');
-    qualityProgress.remove();
-    tile.style.removeProperty('--quality-progress');
     quality.remove();
   }, { once: true });
 }
@@ -1368,8 +1339,6 @@ function downgradeFocusedVideo(tile){
   const preview = tile?.querySelector('video:not(.focus-quality)');
   const quality = tile?.querySelector('video.focus-quality');
   tile?.classList.remove('quality-loading-active');
-  tile?.querySelector('.quality-progress')?.remove();
-  tile?.style.removeProperty('--quality-progress');
   if (!preview || !quality) return;
   if (preview.duration && Number.isFinite(preview.duration)) {
     preview.currentTime = quality.currentTime % preview.duration;
@@ -1596,19 +1565,22 @@ function initLayout(items = MEDIA, category = activeCategory) {
 
     const caption = document.createElement('div');
     caption.className = 'caption';
-    const qualityStatus = document.createElement('span');
-    qualityStatus.className = 'quality-status';
-    qualityStatus.textContent = 'Loading high quality';
     const captionLabel = document.createElement('span');
     captionLabel.className = 'caption-label';
     captionLabel.textContent = item.label;
-    caption.append(qualityStatus, captionLabel);
+    caption.appendChild(captionLabel);
 
     let info = null;
-    if (item.text) {
+    if (item.text || item.type === 'video') {
       info = document.createElement('div');
       info.className = 'info';
-      info.textContent = item.text;
+      if (item.text) info.appendChild(document.createTextNode(item.text));
+      if (item.type === 'video') {
+        const qualityStatus = document.createElement('span');
+        qualityStatus.className = 'quality-status';
+        qualityStatus.textContent = 'Loading HQ video';
+        info.appendChild(qualityStatus);
+      }
       if (category === 'home') {
         const collectionLink = document.createElement('button');
         collectionLink.type = 'button';
@@ -1671,18 +1643,19 @@ let categoryNavReorderTimer = null;
 let categoryNavScrollFrame = null;
 const FOCUS_GUTTER = 24;
 
-const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 const isNonSafariIOSBrowser = isIOSDevice && (
   /CriOS|FxiOS|EdgiOS|OPiOS/i.test(navigator.userAgent) ||
   !/Safari/i.test(navigator.userAgent)
 );
 
 if (isNonSafariIOSBrowser) {
+  iosBrowserWarning.hidden = false;
   requestAnimationFrame(() => iosBrowserWarning.classList.add('visible'));
 }
 iosBrowserWarning.querySelector('button').addEventListener('click', () => {
   iosBrowserWarning.classList.remove('visible');
+  setTimeout(() => { iosBrowserWarning.hidden = true; }, 320);
 });
 
 const videoVisibilityObserver = new IntersectionObserver(entries => {
