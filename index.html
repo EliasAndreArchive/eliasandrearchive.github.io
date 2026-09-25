@@ -156,6 +156,46 @@
     outline-offset: 2px;
   }
   .performance-label-short{ display:none; }
+  .ios-browser-warning{
+    position: fixed;
+    top: 66px;
+    left: 50%;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px 10px 15px;
+    border-radius: 999px;
+    color: var(--bg);
+    background: var(--ink);
+    box-shadow: 0 12px 30px rgba(28,27,23,.22);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -8px) scale(.97);
+    transition: opacity .3s ease, transform .4s cubic-bezier(.22,1,.36,1);
+  }
+  .ios-browser-warning.visible{
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, 0) scale(1);
+  }
+  .ios-browser-warning button{
+    appearance: none;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: var(--bg);
+    background: rgba(255,255,255,.14);
+    font: 16px/1 var(--font);
+    cursor: pointer;
+  }
 
   @media (max-width: 640px){
     body::after{
@@ -996,6 +1036,11 @@
 </head>
 <body>
 
+  <div class="ios-browser-warning" id="ios-browser-warning" role="status" aria-live="polite">
+    <span>Use with native browser</span>
+    <button type="button" aria-label="Dismiss browser warning">&times;</button>
+  </div>
+
   <div class="wordmark">
     <div class="dots"><span></span><span></span><span></span></div>
     <div class="wordmark-copy">
@@ -1620,10 +1665,26 @@ const contactButton = document.getElementById('contact-button');
 const performanceButton = document.getElementById('performance-button');
 const contactPage = document.getElementById('contact-page');
 const collectionLoading = document.getElementById('collection-loading');
+const iosBrowserWarning = document.getElementById('ios-browser-warning');
 let arrangedCategory = null;
 let categoryNavReorderTimer = null;
 let categoryNavScrollFrame = null;
 const FOCUS_GUTTER = 24;
+
+const isIOSDevice = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isNonSafariIOSBrowser = isIOSDevice && (
+  /CriOS|FxiOS|EdgiOS|OPiOS/i.test(navigator.userAgent) ||
+  !/Safari/i.test(navigator.userAgent)
+);
+
+if (isNonSafariIOSBrowser) {
+  requestAnimationFrame(() => iosBrowserWarning.classList.add('visible'));
+}
+iosBrowserWarning.querySelector('button').addEventListener('click', () => {
+  iosBrowserWarning.classList.remove('visible');
+});
+
 const videoVisibilityObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => {
     const video = entry.target;
