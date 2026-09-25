@@ -689,28 +689,30 @@
     transition: opacity .2s ease, border-radius .45s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .tile video.focus-quality.ready{ opacity: 1; }
-  .quality-loading{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    z-index: 6;
-    padding: 8px 11px;
-    border-radius: 999px;
-    color: #fff;
-    background: rgba(18,18,16,.78);
-    font-size: calc(10px * var(--focus-ui-scale, 1));
-    font-weight: 600;
-    letter-spacing: .02em;
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(-50%, -45%);
-    transition: opacity .2s ease, transform .25s ease;
+  .quality-progress{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:7;
+    height:calc(3px * var(--focus-ui-scale, 1));
+    overflow:hidden;
+    background:rgba(255,255,255,.34);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease;
   }
-  .quality-loading.visible{
-    opacity: 1;
-    transform: translate(-50%, -50%);
+  .quality-progress::after{
+    content:'';
+    display:block;
+    width:100%;
+    height:100%;
+    background:var(--ink);
+    transform:scaleX(var(--quality-progress, 0));
+    transform-origin:left center;
+    transition:transform .18s linear;
   }
-
+  .tile.quality-loading-active .quality-progress{ opacity:1; }
   .tile .caption{
     position: absolute; left:0; right:0; bottom:0;
     padding: 18px 10px 7px;
@@ -728,6 +730,27 @@
     pointer-events: none;
     z-index: 2;
   }
+  .quality-status{
+    display:none;
+    flex:0 0 auto;
+    align-items:center;
+    min-height:1.8em;
+    padding:.22em .58em;
+    border-radius:999px;
+    color:#fff;
+    background:var(--ink);
+    font-size:.63em;
+    font-weight:700;
+    line-height:1;
+    letter-spacing:.08em;
+    white-space:nowrap;
+  }
+  .tile.quality-loading-active .caption{
+    display:flex;
+    align-items:center;
+    gap:.65em;
+  }
+  .tile.quality-loading-active .quality-status{ display:inline-flex; }
   .tile:hover .caption, .tile.focused .caption { 
     opacity: 1; transform: none; 
   }
@@ -1172,11 +1195,22 @@ function upgradeFocusedVideo(tile){
   quality.setAttribute('webkit-playsinline', '');
   quality.setAttribute('disableRemotePlayback', '');
   quality.src = fullUrl;
-  const qualityLoading = document.createElement('div');
-  qualityLoading.className = 'quality-loading visible';
-  qualityLoading.textContent = 'Loading high quality…';
+  const qualityProgress = document.createElement('div');
+  qualityProgress.className = 'quality-progress';
+  qualityProgress.setAttribute('aria-hidden', 'true');
   tile.insertBefore(quality, preview.nextSibling);
-  tile.appendChild(qualityLoading);
+  tile.appendChild(qualityProgress);
+  tile.classList.add('quality-loading-active');
+
+  const updateQualityProgress = () => {
+    if (!quality.duration || !Number.isFinite(quality.duration)) return;
+    let bufferedEnd = 0;
+    for (let i = 0; i < quality.buffered.length; i++) {
+      bufferedEnd = Math.max(bufferedEnd, quality.buffered.end(i));
+    }
+    const progress = Math.min(1, Math.max(0, bufferedEnd / quality.duration));
+    tile.style.setProperty('--quality-progress', String(progress));
+  };
 
   let handoffComplete = false;
   const timeDrift = () => {
@@ -1198,8 +1232,11 @@ function upgradeFocusedVideo(tile){
         return;
       }
       quality.classList.add('ready');
-      qualityLoading.classList.remove('visible');
-      setTimeout(() => qualityLoading.remove(), 240);
+      tile.classList.remove('quality-loading-active');
+      setTimeout(() => {
+        qualityProgress.remove();
+        tile.style.removeProperty('--quality-progress');
+      }, 240);
     });
   };
   const syncAndPlay = () => {
@@ -1212,9 +1249,14 @@ function upgradeFocusedVideo(tile){
   quality.addEventListener('seeked', revealIfPlayingAndSynced);
   quality.addEventListener('playing', revealIfPlayingAndSynced);
   quality.addEventListener('timeupdate', revealIfPlayingAndSynced);
+  quality.addEventListener('progress', updateQualityProgress);
+  quality.addEventListener('loadedmetadata', updateQualityProgress);
+  quality.addEventListener('durationchange', updateQualityProgress);
 
   quality.addEventListener('error', () => {
-    qualityLoading.remove();
+    tile.classList.remove('quality-loading-active');
+    qualityProgress.remove();
+    tile.style.removeProperty('--quality-progress');
     quality.remove();
   }, { once: true });
 }
@@ -1222,7 +1264,9 @@ function upgradeFocusedVideo(tile){
 function downgradeFocusedVideo(tile){
   const preview = tile?.querySelector('video:not(.focus-quality)');
   const quality = tile?.querySelector('video.focus-quality');
-  tile?.querySelector('.quality-loading')?.remove();
+  tile?.classList.remove('quality-loading-active');
+  tile?.querySelector('.quality-progress')?.remove();
+  tile?.style.removeProperty('--quality-progress');
   if (!preview || !quality) return;
   if (preview.duration && Number.isFinite(preview.duration)) {
     preview.currentTime = quality.currentTime % preview.duration;
@@ -1449,7 +1493,13 @@ function initLayout(items = MEDIA, category = activeCategory) {
 
     const caption = document.createElement('div');
     caption.className = 'caption';
-    caption.textContent = item.label;
+    const qualityStatus = document.createElement('span');
+    qualityStatus.className = 'quality-status';
+    qualityStatus.textContent = 'Loading high quality';
+    const captionLabel = document.createElement('span');
+    captionLabel.className = 'caption-label';
+    captionLabel.textContent = item.label;
+    caption.append(qualityStatus, captionLabel);
 
     let info = null;
     if (item.text) {
