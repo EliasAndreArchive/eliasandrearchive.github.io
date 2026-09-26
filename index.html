@@ -1072,14 +1072,14 @@
           <a href="mailto:illya.boldyryev@gmail.com">Email</a>
         </div>
         <figure class="contact-film contact-film-primary" aria-label="A short film from the archive">
-          <video autoplay muted loop playsinline preload="metadata" src="https://pub-26ba9fbb06f4490c97b63ffea3c40c67.r2.dev/contact/V1-0001_M11-2029.mp4"></video>
+          <video autoplay muted loop playsinline preload="metadata" src="https://pub-26ba9fbb06f4490c97b63ffea3c40c67.r2.dev/contact/V1-0001_M11-2029.mp4?v=20260926-23976"></video>
         </figure>
         <section class="contact-gear" aria-labelledby="contact-gear-title">
           <h2 id="contact-gear-title">Process &amp; gear</h2>
           <p>Almost all moving images in this archive were shot on a Canon 70D running Magic Lantern, allowing me to record 14-bit RAW video in an open-gate 3:2 format. I edit in DaVinci Resolve and color grade with the SpektraFilm add-on.</p>
         </section>
         <figure class="contact-film contact-film-secondary" aria-label="A second short film from the archive">
-          <video autoplay muted loop playsinline preload="metadata" src="https://pub-26ba9fbb06f4490c97b63ffea3c40c67.r2.dev/contact/V1-0001_2026-09-24%2020-43-04.mp4"></video>
+          <video autoplay muted loop playsinline preload="metadata" src="https://pub-26ba9fbb06f4490c97b63ffea3c40c67.r2.dev/contact/V1-0001_2026-09-24%2020-43-04.mp4?v=20260926-23976"></video>
         </figure>
         <p class="contact-performance-note">On a lower-end device, use Performance mode for smoother playback.</p>
       </div>
@@ -1090,6 +1090,7 @@
 let MEDIA = [];
 let mediaBaseUrl = '';
 let previewBaseUrl = '';
+let mediaVersion = '';
 const PERFORMANCE_STORAGE_KEY = 'visual-field-notes-performance-previews';
 let previewsEnabled = (() => {
   try { return localStorage.getItem(PERFORMANCE_STORAGE_KEY) !== 'off'; }
@@ -1173,16 +1174,27 @@ function updateCollectionLoading(){
   collectionLoading.classList.toggle('visible', !enoughReady);
 }
 
+function versionedMediaUrl(url){
+  if (!mediaVersion) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}v=${encodeURIComponent(mediaVersion)}`;
+}
+
 function mediaUrl(item){
-  if (/^https?:\/\//i.test(item.file)) return item.file;
-  return mediaBaseUrl.replace(/\/?$/, '/') + item.file.replace(/^\//, '');
+  const url = /^https?:\/\//i.test(item.file)
+    ? item.file
+    : mediaBaseUrl.replace(/\/?$/, '/') + item.file.replace(/^\//, '');
+  return versionedMediaUrl(url);
 }
 
 function previewMediaUrl(item){
   if (!item.previewFile) return mediaUrl(item);
-  if (/^(?:https?:)?\/\//i.test(item.previewFile)) return item.previewFile;
-  if (!previewBaseUrl) return item.previewFile.replace(/^\//, '');
-  return previewBaseUrl.replace(/\/?$/, '/') + item.previewFile.replace(/^\//, '');
+  const url = /^(?:https?:)?\/\//i.test(item.previewFile)
+    ? item.previewFile
+    : previewBaseUrl
+      ? previewBaseUrl.replace(/\/?$/, '/') + item.previewFile.replace(/^\//, '')
+      : item.previewFile.replace(/^\//, '');
+  return versionedMediaUrl(url);
 }
 
 function switchVideoSource(video, nextSrc){
@@ -2417,6 +2429,7 @@ async function loadArchive(){
     const archive = await response.json();
     mediaBaseUrl = archive.mediaBaseUrl || '';
     previewBaseUrl = archive.previewBaseUrl ?? mediaBaseUrl;
+    mediaVersion = archive.mediaVersion || '';
     MEDIA = (archive.items || []).map(item => {
       const extension = item.file.split('?')[0].split('.').pop().toLowerCase();
       return {
