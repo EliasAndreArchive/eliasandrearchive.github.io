@@ -28,8 +28,6 @@ The site is a lightweight static project built with HTML, CSS and JavaScript. Cl
 
 The source lives in this GitHub repository. The public website is deployed through Cloudflare Pages and served from **[eliasandre.space](https://eliasandre.space/#home)**. The repository name is retained from the site's earlier GitHub Pages version.
 
-Instructions for adding new work are available in [`ADDING_MEDIA.md`](ADDING_MEDIA.md).
-
 ---
 
 © 2026 Elias Andre. All rights reserved.
