@@ -13,8 +13,6 @@
 
 Visual Field Notes documents real scenes as they unfold through a raw, grounded and artistic perspective. The archive brings together short cinematic observations shaped by documentary framing, expressive color and the character of the equipment used to capture them.
 
-The work is organized into collections including **Ireland**, **Croatia**, **Fields**, **Forest**, **Concerts** and **Aquarium**. The Home page draws a balanced selection from across the archive, while each focused clip includes its title and camera and lens information.
-
 ## The experience
 
 - A free-moving visual canvas on desktop and an organic vertical layout on mobile
